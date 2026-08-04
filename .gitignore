@@ -1,0 +1,19 @@
+# Environment variables / secrets
+.env
+.env.*
+!.env.example
+.vlm_cache/
+vlm_overlays/
+vlm_overlays/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# IDE / OS files
+.vs/
+.vscode/
+.DS_Store
+Thumbs.db
