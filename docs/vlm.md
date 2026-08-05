@@ -22,7 +22,9 @@ VLM 담당 범위:
 - JPG, JPEG, PNG, WebP, BMP 지원
 - 긴 변을 최대 1024px로 축소하고 JPEG 품질 85로 정규화
 - 엄격한 JSON Schema 기반 폐기물 관찰 결과
-- 입력 이미지 해시 기반 JSON 캐시
+- OpenAI 제공자와 이후 로컬 제공자를 교체할 수 있는 제공자 인터페이스
+- 프롬프트·스키마·모델·입력 이미지 해시 기반 JSON 캐시
+- 업로드 크기, 이미지 디코딩, 설정, 시간 초과, 일시 장애, 잘못된 응답 오류 처리
 - 단일 이미지·복수 이미지·폴더 CLI와 오버레이 출력
 
 ## 구조
@@ -33,9 +35,11 @@ vlm/
 │  ├─ main.py              # FastAPI 엔드포인트와 CLI
 │  ├─ preprocessing.py     # 이미지 탐색·축소·인코딩·해시
 │  ├─ inference.py         # 프롬프트, 모델 호출, 캐시
-│  ├─ schemas.py           # 구조화 출력 JSON Schema
-│  ├─ model_loader.py      # 모델명과 OpenAI 클라이언트
+│  ├─ schemas.py           # 관찰 스키마 로드·검증
+│  ├─ providers/           # OpenAI 및 이후 로컬 VLM 제공자 경계
 │  └─ postprocessing.py    # 위치 상자 오버레이 생성
+├─ schemas/
+│  └─ observation-response.json # VLM 내부 상세 관찰 계약
 ├─ prompts/
 │  └─ waste_classifier.txt # 시스템 프롬프트
 ├─ data/photos/            # 로컬 테스트 이미지, Git 제외
@@ -53,9 +57,9 @@ vlm/
 이미지 경로 또는 업로드
   → 확장자·빈 파일 검사
   → RGB 변환과 최대 1024px 축소
-  → JPEG 인코딩과 SHA-1 해시
+  → JPEG 인코딩과 SHA-256 해시
   → 캐시 조회
-  → 시스템 프롬프트 + 이미지로 모델 호출
+  → 선택한 제공자에 시스템 프롬프트 + 이미지 전달
   → 엄격한 JSON Schema 결과 파싱
   → 캐시 저장
   → API JSON 또는 CLI 출력
@@ -67,19 +71,22 @@ API 업로드는 임시 파일에 기록한 뒤 성공·실패와 관계없이 �
 
 최상위 필드:
 
+- `schema_version`, `status`: 스키마 버전과 성공·재촬영·미지원 상태
 - `scene_type`: 단일 품목, 복수 품목, 불명확 장면
+- `image_quality`: 사진 사용 가능 여부와 재촬영 사유
 - `items`: 발견한 폐기물 후보 목록
 - `notes`: 장면 전체 참고사항
 
 주요 품목 필드:
 
-- `label`, `category`, `material`, `quantity`
-- `longest_side_cm`, `size_basis`, `reference_object`
+- `label`, `alternatives`, `category`, `material`, `quantity`
+- `estimated_longest_side_cm`, `size_basis`, `measurement_required`
 - `condition`, `contamination`
-- `confidence`, `needs_user_confirmation`, `confirm_question`
+- `confidence`, `confidence_tier`, `needs_user_confirmation`, `confirm_question`
+- `visual_evidence`: 사진에서 직접 확인한 판별 근거
 - `bbox`: 0~1000 정규화 좌표의 `[left, top, right, bottom]`
 
-스키마를 변경할 때는 `vlm/app/schemas.py`와 다음 공통 계약을 함께 확인합니다.
+VLM 내부 스키마 원본은 `vlm/schemas/observation-response.json`입니다. 공용 API 계약을 직접 수정하지 않고, Backend 연동 전에 다음 계약과의 필드 매핑을 팀과 합의합니다.
 
 - `shared/schemas/analysis-response.json`
 - `shared/api/openapi.yaml`
@@ -94,14 +101,17 @@ VLM 스키마와 공통 응답 스키마가 달라지면 Backend·Frontend 연�
 | `GET` | `/health` | VLM 서비스 상태 확인 |
 | `POST` | `/analyze` | `multipart/form-data`의 `file` 이미지를 구조화 판독 |
 
-지원하지 않는 확장자는 `415`, 빈 파일은 `400`을 반환합니다. 서버 실행 후 <http://localhost:8001/docs>에서 대화형 API 문서를 확인할 수 있습니다.
+지원하지 않는 확장자는 `415`, 빈 파일·이미지 디코딩 오류는 `400`, 큰 파일은 `413`을 반환합니다. 제공자 설정·일시 장애는 `503`, 시간 초과는 `504`, 잘못된 제공자 응답은 `502`로 구분합니다. 서버 실행 후 <http://localhost:8001/docs>에서 대화형 API 문서를 확인할 수 있습니다.
 
 ## 환경 변수
 
 | 변수 | 기본값 | 용도 |
 | --- | --- | --- |
 | `OPENAI_API_KEY` | 필수 | OpenAI 추론 인증 |
-| `VLM_MODEL` | `gpt-5.6` | 호출할 모델 |
+| `VLM_PROVIDER` | `openai` | 사용할 VLM 제공자 |
+| `OPENAI_VLM_MODEL` | `gpt-5.6-sol` | OpenAI 제공자 모델 |
+| `OPENAI_TIMEOUT_SECONDS` | `60` | OpenAI 요청 제한 시간 |
+| `VLM_MAX_UPLOAD_MB` | `10` | API 이미지 최대 크기 |
 | `VLM_IMAGE_DIR` | `vlm/data/photos` | CLI 인자가 없을 때 읽을 폴더 |
 | `VLM_CACHE_DIR` | `vlm/.vlm_cache` | 판독 결과 JSON 캐시 |
 
@@ -163,9 +173,9 @@ python -m vlm.app.main C:\path\to\waste.jpg --overlay --no-cache
 ## 프롬프트·스키마 변경 절차
 
 1. 수수료 판단이 아니라 이미지에서 관찰 가능한 정보인지 확인합니다.
-2. `prompts/waste_classifier.txt`와 `app/schemas.py`의 의미를 함께 맞춥니다.
+2. `prompts/waste_classifier.txt`와 `schemas/observation-response.json`의 의미를 함께 맞춥니다.
 3. 기존 샘플 이미지로 단일·복수·불명확 장면을 비교합니다.
-4. 필드 변경 시 공통 계약과 Backend 소비 코드를 함께 갱신합니다.
+4. 공용 필드 변경이 필요하면 직접 수정하지 않고 협업 요청으로 합의합니다.
 5. 캐시 의미가 달라졌다면 `CACHE_VERSION`을 변경해 이전 결과와 분리합니다.
 
 ## 배포
@@ -182,8 +192,8 @@ VLM을 먼저 배포하고 발급된 HTTPS 주소를 Backend의 `VLM_BASE_URL`�
 
 ## 다음 작업
 
-- [ ] API 업로드 크기 제한과 이미지 디코딩 오류 처리
-- [ ] 모델 호출 제한 시간·재시도·오류 응답 정책
+- [x] API 업로드 크기 제한과 이미지 디코딩 오류 처리
+- [x] 모델 호출 제한 시간·재시도·오류 응답 정책
 - [ ] 대표 실제 사진 평가 세트와 품질 지표
 - [ ] 낮은 신뢰도·복수 품목·크기 추정 회귀 테스트
 - [ ] 공통 응답 스키마와 VLM 상세 스키마 정합성 확정
