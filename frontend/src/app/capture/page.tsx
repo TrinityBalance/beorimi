@@ -115,7 +115,7 @@ export default function CapturePage() {
       <section className="capture-intro">
         <span className="step-chip">STEP 1</span>
         <h2>판별할 폐기물을 확인해주세요</h2>
-        <p>여러 개라면 판별할 물건을 손가락으로 둘러주세요.</p>
+        <p>사진 전체를 사용하면 여러 물건을 한 번에 찾아요. 하나만 보려면 영역을 둘러주세요.</p>
       </section>
 
       <div
@@ -137,8 +137,8 @@ export default function CapturePage() {
             <span className="selection-corner selection-corner--tr" />
             <span className="selection-corner selection-corner--bl" />
             <span className="selection-corner selection-corner--br" />
-            <strong>폐기물 영역 선택</strong>
-            <span>사진 위를 드래그하세요</span>
+            <strong>여러 물건 자동 판별</strong>
+            <span>사진 전체를 꼼꼼히 살펴볼게요</span>
           </div>
         )}
         {region && (
@@ -168,7 +168,7 @@ export default function CapturePage() {
           onClick={() => setRegion(null)}
         >
           <span className="check-dot" aria-hidden="true" />
-          사진 전체 사용
+          사진 속 물건 전체 찾기
         </button>
         {region && (
           <button className="text-button" type="button" onClick={() => setRegion(null)}>
@@ -179,12 +179,12 @@ export default function CapturePage() {
 
       <aside className="photo-tip">
         <span aria-hidden="true">!</span>
-        <p><strong>크기도 함께 확인해요</strong> 비교할 물건이 함께 찍혀 있으면 더 정확해져요.</p>
+        <p><strong>겹치지 않게 찍어주세요</strong> 물건 사이가 조금 떨어져 있으면 각각 더 정확히 찾을 수 있어요.</p>
       </aside>
 
       <div className="sticky-cta">
         <button className="primary-button" type="button" onClick={startAnalysis}>
-          이 사진으로 판별하기
+          {region ? "선택한 물건 판별하기" : "사진 속 물건 모두 판별하기"}
           <span aria-hidden="true">→</span>
         </button>
       </div>

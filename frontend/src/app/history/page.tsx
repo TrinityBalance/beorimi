@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { clearHistory, getHistory } from "@/lib/analysis-store";
+import { getResultSummary } from "@/lib/result";
 import type { WasteAnalysisResult } from "@/types/analysis";
 
 export default function HistoryPage() {
@@ -41,24 +42,28 @@ export default function HistoryPage() {
         <div className="screen-loading" />
       ) : history.length > 0 ? (
         <div className="history-list">
-          {history.map((item) => (
-            <Link className="history-card" href={`/result/${item.id}`} key={item.id}>
-              <div
-                className={item.image ? "history-card__photo" : "history-card__photo image-placeholder"}
-                style={item.image ? { backgroundImage: `url(${item.image})` } : undefined}
-                aria-hidden="true"
-              >
-                <span>{item.primary.confidence}%</span>
-              </div>
-              <div className="history-card__body">
-                <small>{formatDate(item.createdAt)}</small>
-                <strong>{item.primary.name}</strong>
-                <p>{item.primary.fee.toLocaleString("ko-KR")}원 · 신고 필요</p>
-                <span className="history-source"><span aria-hidden="true">✓</span> 강남구 규정 확인</span>
-              </div>
-              <span className="round-arrow" aria-hidden="true">›</span>
-            </Link>
-          ))}
+          {history.map((item) => {
+            const summary = getResultSummary(item);
+
+            return (
+              <Link className="history-card" href={`/result/${item.id}`} key={item.id}>
+                <div
+                  className={item.image ? "history-card__photo" : "history-card__photo image-placeholder"}
+                  style={item.image ? { backgroundImage: `url(${item.image})` } : undefined}
+                  aria-hidden="true"
+                >
+                  <span>{summary.confidence}%</span>
+                </div>
+                <div className="history-card__body">
+                  <small>{formatDate(item.createdAt)}</small>
+                  <strong>{summary.title}</strong>
+                  <p>{summary.description}</p>
+                  <span className="history-source"><span aria-hidden="true">✓</span> {summary.status}</span>
+                </div>
+                <span className="round-arrow" aria-hidden="true">›</span>
+              </Link>
+            );
+          })}
         </div>
       ) : (
         <section className="history-empty">

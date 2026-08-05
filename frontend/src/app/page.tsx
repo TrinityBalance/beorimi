@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PhotoPicker } from "@/components/photo-picker";
 import { getHistory } from "@/lib/analysis-store";
+import { getResultSummary } from "@/lib/result";
 import type { WasteAnalysisResult } from "@/types/analysis";
 
 export default function Home() {
@@ -15,6 +16,8 @@ export default function Home() {
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
+
+  const recentSummary = recent ? getResultSummary(recent) : null;
 
   return (
     <main className="page home-page">
@@ -39,16 +42,16 @@ export default function Home() {
           버려야 할까요?
         </h1>
         <p>
-          사진 한 장이면 품목부터 수수료,
+          사진 한 장이면 여러 품목을 찾아
           <br />
-          배출 방법까지 확인해드려요.
+          신고할 목록으로 정리해드려요.
         </p>
 
         <div className="hero-camera-wrap">
           <span className="orbit orbit--one" aria-hidden="true" />
           <span className="orbit orbit--two" aria-hidden="true" />
           <PhotoPicker mode="camera" variant="hero" />
-          <span className="hero-note">가운데에 폐기물을 맞춰주세요</span>
+          <span className="hero-note">버릴 물건이 모두 보이게 찍어주세요</span>
         </div>
 
         <PhotoPicker mode="album" variant="secondary" />
@@ -63,7 +66,7 @@ export default function Home() {
           <Link href="/history">전체보기 <span aria-hidden="true">›</span></Link>
         </div>
 
-        {recent ? (
+        {recent && recentSummary ? (
           <Link className="recent-card" href={`/result/${recent.id}`}>
             <div
               className={`recent-card__image ${recent.image ? "" : "image-placeholder"}`}
@@ -72,8 +75,8 @@ export default function Home() {
             />
             <div className="recent-card__body">
               <span className="recent-card__date">{formatRelativeDate(recent.createdAt)}</span>
-              <strong>{recent.primary.name}</strong>
-              <span>{recent.primary.fee.toLocaleString("ko-KR")}원 · 신고 필요</span>
+              <strong>{recentSummary.title}</strong>
+              <span>{recentSummary.description}</span>
             </div>
             <span className="round-arrow" aria-hidden="true">↗</span>
           </Link>

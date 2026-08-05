@@ -3,14 +3,20 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { MultiResultView } from "@/components/multi-result-view";
 import { PageHeader } from "@/components/page-header";
 import { getResult, saveResult } from "@/lib/analysis-store";
-import type { WasteAnalysisResult, WasteCandidate } from "@/types/analysis";
+import { isLegacyResult, isMultiResult } from "@/lib/result";
+import type {
+  MultiWasteAnalysisResult,
+  WasteAnalysisResult,
+  WasteCandidate,
+} from "@/types/analysis";
 
 const sofaSizes = [
-  { size: "1인용", fee: 3000 },
-  { size: "2~3인용", fee: 8000 },
-  { size: "4인용 이상", fee: 12000 },
+  { size: "1인용", fee: 3000, guide: "한 사람이 앉는 소파 또는 안락의자 크기" },
+  { size: "2~3인용", fee: 8000, guide: "성인 두세 명이 나란히 앉는 일반 소파" },
+  { size: "4인용 이상", fee: 12000, guide: "네 명 이상이 앉거나 코너가 이어진 대형 소파" },
 ];
 
 export default function ResultPage() {
@@ -19,20 +25,21 @@ export default function ResultPage() {
   const [result, setResult] = useState<WasteAnalysisResult | null>();
   const [selected, setSelected] = useState<WasteCandidate | null>(null);
   const [showCandidates, setShowCandidates] = useState(false);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       const stored = getResult(params.id);
       setResult(stored);
-      setSelected(stored?.primary ?? null);
+      setSelected(stored && isLegacyResult(stored) ? stored.primary : null);
     });
 
     return () => window.cancelAnimationFrame(frame);
   }, [params.id]);
 
   function chooseCandidate(candidate: WasteCandidate) {
-    if (!result) return;
+    if (!result || !isLegacyResult(result)) return;
 
     const updated = { ...result, primary: candidate };
     setSelected(candidate);
@@ -43,7 +50,7 @@ export default function ResultPage() {
   }
 
   function chooseSize(size: string, fee: number) {
-    if (!result || !selected) return;
+    if (!result || !isLegacyResult(result) || !selected) return;
 
     const next = { ...selected, name: `${size} 소파`, size, fee };
     const updated = { ...result, primary: next };
@@ -73,7 +80,7 @@ export default function ResultPage() {
     );
   }
 
-  if (!result || !selected) {
+  if (!result) {
     return (
       <main className="page result-page">
         <PageHeader title="판별 결과" />
@@ -81,6 +88,31 @@ export default function ResultPage() {
           <span aria-hidden="true">?</span>
           <h2>결과를 찾을 수 없어요</h2>
           <p>최근 기록에서 다시 찾거나 새 사진을 판별해주세요.</p>
+          <Link className="primary-button" href="/capture">새로 판별하기</Link>
+        </section>
+      </main>
+    );
+  }
+
+  if (isMultiResult(result)) {
+    return (
+      <MultiResultView
+        result={result}
+        onChange={(updated: MultiWasteAnalysisResult) => {
+          setResult(updated);
+          saveResult(updated);
+        }}
+      />
+    );
+  }
+
+  if (!selected) {
+    return (
+      <main className="page result-page">
+        <PageHeader title="판별 결과" />
+        <section className="missing-result">
+          <span aria-hidden="true">?</span>
+          <h2>선택한 품목을 찾을 수 없어요</h2>
           <Link className="primary-button" href="/capture">새로 판별하기</Link>
         </section>
       </main>
@@ -161,6 +193,37 @@ export default function ResultPage() {
             <span className="required-chip">필수 확인</span>
           </div>
           <p className="section-description">사진만으로 정확한 크기는 알기 어려워요.</p>
+          <button
+            className={`size-helper-toggle ${showSizeGuide ? "is-open" : ""}`}
+            type="button"
+            onClick={() => setShowSizeGuide((isOpen) => !isOpen)}
+            aria-expanded={showSizeGuide}
+            aria-controls="legacy-size-guide"
+          >
+            <span className="ruler-glyph" aria-hidden="true" />
+            {showSizeGuide ? "규격 도우미 닫기" : "어떤 규격인지 모르겠어요"}
+            <span aria-hidden="true">⌄</span>
+          </button>
+          {showSizeGuide && (
+            <aside className="size-guide-panel size-guide-panel--legacy" id="legacy-size-guide">
+              <div>
+                <span className="size-guide-panel__icon" aria-hidden="true">↔</span>
+                <p>
+                  <strong>실제로 앉을 수 있는 좌석 수를 확인하세요</strong>
+                  쿠션 개수보다 성인이 나란히 앉을 수 있는 자리를 기준으로 비교하면 쉬워요.
+                </p>
+              </div>
+              <ul>
+                {sofaSizes.map((option) => (
+                  <li key={option.size}>
+                    <strong>{option.size}</strong>
+                    <span>{option.guide}</span>
+                  </li>
+                ))}
+              </ul>
+              <small>분리형·코너형 소파는 조각별 신고 여부를 공식 신고 단계에서 다시 확인해주세요.</small>
+            </aside>
+          )}
           <div className="size-options" role="radiogroup" aria-label="소파 크기">
             {sofaSizes.map((option) => (
               <button

@@ -1,4 +1,4 @@
-import type { PendingPhoto } from "@/types/analysis";
+import type { PendingPhoto, SelectionRegion } from "@/types/analysis";
 
 const MAX_EDGE = 1280;
 const JPEG_QUALITY = 0.82;
@@ -52,6 +52,44 @@ export function dataUrlToBlob(dataUrl: string): Blob {
   }
 
   return new Blob([bytes], { type: mime });
+}
+
+export async function cropPhoto(
+  photo: PendingPhoto,
+  region: SelectionRegion,
+): Promise<PendingPhoto> {
+  const image = await loadImage(photo.dataUrl);
+  const sourceX = Math.round((region.x / 100) * image.width);
+  const sourceY = Math.round((region.y / 100) * image.height);
+  const sourceWidth = Math.max(1, Math.round((region.width / 100) * image.width));
+  const sourceHeight = Math.max(1, Math.round((region.height / 100) * image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = sourceWidth;
+  canvas.height = sourceHeight;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("선택한 영역을 처리할 수 없어요. 다시 시도해주세요.");
+  }
+
+  context.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    sourceWidth,
+    sourceHeight,
+  );
+
+  return {
+    dataUrl: canvas.toDataURL("image/jpeg", JPEG_QUALITY),
+    name: photo.name,
+    width: sourceWidth,
+    height: sourceHeight,
+  };
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {

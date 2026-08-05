@@ -7,16 +7,17 @@ import {
   getSelectedRegion,
   saveResult,
 } from "@/lib/analysis-store";
-import { dataUrlToBlob } from "@/lib/image";
-import type { WasteAnalysisResult } from "@/types/analysis";
+import { cropPhoto, dataUrlToBlob } from "@/lib/image";
+import type {
+  AnalyzeRouteResponse,
+  MultiWasteAnalysisResult,
+} from "@/types/analysis";
 
 const stages = [
-  { title: "이미지 판독", description: "모양과 재질을 살펴보고 있어요" },
-  { title: "강남구 품목 검색", description: "공식 품목표와 비교하고 있어요" },
-  { title: "배출 규정 확인", description: "수수료와 배출법을 교차 확인해요" },
+  { title: "사진 속 물체 찾기", description: "버릴 물건의 위치를 찾고 있어요" },
+  { title: "품목 판독", description: "물건마다 종류와 특징을 살펴봐요" },
+  { title: "결과 목록 만들기", description: "찾은 물건을 보기 쉽게 정리해요" },
 ];
-
-type ApiResult = Omit<WasteAnalysisResult, "image">;
 
 export default function AnalyzePage() {
   const router = useRouter();
@@ -34,7 +35,6 @@ export default function AnalyzePage() {
       return;
     }
 
-    setPhotoUrl(photo.dataUrl);
     setError("");
     setActiveStage(0);
 
@@ -42,9 +42,15 @@ export default function AnalyzePage() {
     const stageThree = window.setTimeout(() => setActiveStage(2), 1450);
 
     try {
+      const analysisPhoto = region ? await cropPhoto(photo, region) : photo;
+      setPhotoUrl(analysisPhoto.dataUrl);
+
       const formData = new FormData();
-      formData.append("image", dataUrlToBlob(photo.dataUrl), photo.name);
-      if (region) formData.append("region", JSON.stringify(region));
+      formData.append(
+        "image",
+        dataUrlToBlob(analysisPhoto.dataUrl),
+        analysisPhoto.name,
+      );
 
       const minimumDelay = new Promise((resolve) => setTimeout(resolve, 2300));
       const request = fetch("/api/analyze", {
@@ -55,11 +61,48 @@ export default function AnalyzePage() {
           const body = (await response.json()) as { message?: string };
           throw new Error(body.message ?? "분석 요청에 실패했어요.");
         }
-        return response.json() as Promise<ApiResult>;
+        return response.json() as Promise<AnalyzeRouteResponse>;
       });
 
       const [result] = await Promise.all([request, minimumDelay]);
-      const completed: WasteAnalysisResult = { ...result, image: photo.dataUrl };
+      if (result.items.length === 0) {
+        throw new Error(
+          "사진에서 대형 폐기물을 찾지 못했어요. 물건이 크게 보이는 사진으로 다시 시도해주세요.",
+        );
+      }
+
+      const completed: MultiWasteAnalysisResult = {
+        kind: "multi",
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        district: "서울 강남구",
+        image: analysisPhoto.dataUrl,
+        imageName: analysisPhoto.name,
+        imageWidth: analysisPhoto.width,
+        imageHeight: analysisPhoto.height,
+        region,
+        sceneType: result.scene_type,
+        items: result.items.map((item) => {
+          const catalogItem = result.catalog?.find((entry) => entry.name === item.label);
+          const estimatedFee = result.feeEstimates?.[String(item.id)];
+          const matchingSize = catalogItem?.sizes.find(
+            (size) => size.fee === estimatedFee,
+          );
+
+          return {
+            ...item,
+            selected: true,
+            detectedLabel: item.label,
+            quantity: 1,
+            size: matchingSize?.label ?? catalogItem?.sizes[0]?.label,
+            estimatedFee,
+            userConfirmed: false,
+          };
+        }),
+        notes: result.notes,
+        demo: result.demo,
+        catalog: result.catalog,
+      };
       saveResult(completed);
       router.replace(`/result/${completed.id}`);
     } catch (caught) {
@@ -88,8 +131,8 @@ export default function AnalyzePage() {
 
       <section className="analyze-copy">
         <span className="eyebrow eyebrow--dark">AI ANALYSIS</span>
-        <h1>사진을 꼼꼼히<br />살펴보고 있어요</h1>
-        <p>약 5초 정도 걸려요. 잠시만 기다려주세요.</p>
+        <h1>사진 속 물건을<br />하나씩 찾고 있어요</h1>
+        <p>여러 물건도 각각 나눠서 판별해드릴게요.</p>
       </section>
 
       <div className="scanner-card" aria-hidden="true">
