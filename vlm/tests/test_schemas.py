@@ -19,6 +19,13 @@ class ObservationSchemaTests(unittest.TestCase):
         with self.assertRaises(ValidationError):
             validate_observation(observation)
 
+    def test_unknown_guardrail_signal_is_rejected(self) -> None:
+        observation = sample_observation()
+        observation["security"]["signals"] = ["free_form_attack_text"]
+
+        with self.assertRaises(ValidationError):
+            validate_observation(observation)
+
     def test_structured_output_schema_omits_document_metadata(self) -> None:
         schema = structured_output_schema()
 

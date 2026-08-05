@@ -9,6 +9,11 @@ def sample_observation() -> dict:
             "retake_required": False,
             "retake_message": None,
         },
+        "security": {
+            "prompt_injection_detected": False,
+            "risk_level": "none",
+            "signals": [],
+        },
         "items": [
             {
                 "id": 1,

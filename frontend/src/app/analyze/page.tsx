@@ -33,6 +33,7 @@ export default function AnalyzePage() {
   const [activeStage, setActiveStage] = useState(0);
   const [error, setError] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
+  const [quotaExhausted, setQuotaExhausted] = useState(false);
 
   const runAnalysis = useCallback(async () => {
     abortRef.current?.abort();
@@ -48,6 +49,7 @@ export default function AnalyzePage() {
     }
 
     setError("");
+    setQuotaExhausted(false);
     setActiveStage(0);
 
     try {
@@ -107,6 +109,9 @@ export default function AnalyzePage() {
       ) {
         router.replace("/login?next=/analyze&reason=expired");
         return;
+      }
+      if (caught instanceof BackendApiError && caught.status === 429) {
+        setQuotaExhausted(true);
       }
       setError(
         caught instanceof Error ? caught.message : "잠시 후 다시 시도해주세요.",
@@ -178,7 +183,18 @@ export default function AnalyzePage() {
         <div className="analysis-error" role="alert">
           <strong>분석을 마치지 못했어요</strong>
           <p>{error}</p>
-          <button type="button" onClick={() => void runAnalysis()}>다시 시도</button>
+          <button
+            type="button"
+            onClick={() => {
+              if (quotaExhausted) {
+                router.replace("/");
+                return;
+              }
+              void runAnalysis();
+            }}
+          >
+            {quotaExhausted ? "홈으로 돌아가기" : "다시 시도"}
+          </button>
         </div>
       )}
 

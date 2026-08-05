@@ -1,4 +1,8 @@
 import httpx
+from pydantic import ValidationError
+
+from ..agents.graph import PROMPT_INJECTION_BLOCK_MESSAGE, evaluate_vlm_result
+from ..schemas.vlm import VlmAnalysisResult
 
 SERVICE_TOKEN_HEADER = "X-Beorimi-Service-Token"
 
@@ -16,6 +20,10 @@ class VlmConnectionError(VlmServiceError):
 
 
 class VlmTimeoutError(VlmServiceError):
+    pass
+
+
+class VlmGuardrailError(VlmServiceError):
     pass
 
 
@@ -60,11 +68,28 @@ class VlmClient:
             raise VlmResponseError(response.status_code, detail)
 
         try:
-            return response.json()
+            payload = response.json()
         except ValueError as error:
             raise VlmResponseError(502, "VLM returned invalid JSON") from error
+        try:
+            return VlmAnalysisResult.model_validate(payload).model_dump(mode="json")
+        except ValidationError as error:
+            raise VlmResponseError(
+                502,
+                "VLM returned a response that does not match the internal contract",
+            ) from error
 
-    async def analyze(
+    @staticmethod
+    def _guard_observation(result: dict) -> dict:
+        state = evaluate_vlm_result(
+            result["observation"],
+            result["guardrail"],
+        )
+        if state["status"] == "blocked":
+            raise VlmGuardrailError(PROMPT_INJECTION_BLOCK_MESSAGE)
+        return state["observation"]
+
+    async def analyze_result(
         self, filename: str, content: bytes, content_type: str
     ) -> dict:
         try:
@@ -82,7 +107,13 @@ class VlmClient:
 
         return self._parse_response(response)
 
-    def analyze_sync(
+    async def analyze(
+        self, filename: str, content: bytes, content_type: str
+    ) -> dict:
+        result = await self.analyze_result(filename, content, content_type)
+        return self._guard_observation(result)
+
+    def analyze_result_sync(
         self, filename: str, content: bytes, content_type: str
     ) -> dict:
         try:
@@ -99,3 +130,9 @@ class VlmClient:
             raise VlmConnectionError("VLM service is unreachable") from error
 
         return self._parse_response(response)
+
+    def analyze_sync(
+        self, filename: str, content: bytes, content_type: str
+    ) -> dict:
+        result = self.analyze_result_sync(filename, content, content_type)
+        return self._guard_observation(result)

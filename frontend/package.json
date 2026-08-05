@@ -9,10 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "sites:dev": "vinext dev",
-    "sites:build": "vinext build",
-    "sites:start": "vinext start"
+    "lint": "eslint"
   },
   "dependencies": {
     "aws-amplify": "^6.20.0",
@@ -21,19 +18,14 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.50.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@vitejs/plugin-rsc": "^0.5.32",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "vinext": "0.0.50",
-    "vite": "^8.2.0",
-    "wrangler": "^4.118.0"
+    "typescript": "^5"
   },
   "overrides": {
     "undici": "7.29.0"

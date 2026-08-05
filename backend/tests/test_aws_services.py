@@ -3,11 +3,17 @@ from decimal import Decimal
 from io import BytesIO
 import unittest
 
+from botocore.exceptions import ClientError
+
+from backend.app.repositories.analysis_repository import (
+    AnalysisQuotaLimitReachedError,
+    AnalysisRepository,
+)
 from backend.app.services.analysis_service import (
     AnalysisNotFoundError,
+    AnalysisQuotaExceededError,
     AnalysisService,
 )
-from backend.app.repositories.analysis_repository import AnalysisRepository
 from backend.app.services.upload_service import UploadService, UploadValidationError
 from backend.app.services.vlm_client import VlmResponseError
 from backend.app.workers.analysis import process_record
@@ -42,18 +48,31 @@ class FakeS3:
 
 
 class FakeRepository:
-    def __init__(self) -> None:
+    def __init__(self, create_error=None) -> None:
         self.records = {}
         self.processing = []
         self.completed = []
         self.failed = []
+        self.quota = {}
+        self.create_error = create_error
 
     def create(self, record):
+        if self.create_error:
+            raise self.create_error
         self.records[record["id"]] = record
         return record
 
     def get(self, analysis_id):
         return self.records.get(analysis_id)
+
+    def reserve_quota(self, owner, limit):
+        used = self.quota.get(owner, 0)
+        if used >= limit:
+            raise AnalysisQuotaLimitReachedError
+        self.quota[owner] = used + 1
+
+    def release_quota(self, owner):
+        self.quota[owner] -= 1
 
     def mark_processing(self, analysis_id, updated_at):
         self.processing.append((analysis_id, updated_at))
@@ -66,10 +85,13 @@ class FakeRepository:
 
 
 class FakeSqs:
-    def __init__(self) -> None:
+    def __init__(self, error=None) -> None:
         self.messages = []
+        self.error = error
 
     def send_message(self, **kwargs):
+        if self.error:
+            raise self.error
         self.messages.append(kwargs)
 
 
@@ -81,19 +103,51 @@ class FakeTable:
         self.update_request = kwargs
 
 
+class FakeQuotaTable:
+    def __init__(self) -> None:
+        self.counts = {}
+
+    def update_item(self, **kwargs):
+        key = kwargs["Key"]["id"]
+        values = kwargs["ExpressionAttributeValues"]
+        count = self.counts.get(key, 0)
+        if ":minus_one" in values:
+            self.counts[key] = count + values[":minus_one"]
+            return
+        if count >= values[":limit"]:
+            raise ClientError(
+                {
+                    "Error": {
+                        "Code": "ConditionalCheckFailedException",
+                        "Message": "limit reached",
+                    }
+                },
+                "UpdateItem",
+            )
+        self.counts[key] = count + values[":one"]
+
+
 class FakeVlmClient:
-    def __init__(self, result=None, error=None) -> None:
-        self.result = result or {
+    def __init__(self, result=None, error=None, guardrail=None) -> None:
+        self.observation = result or {
             "scene_type": "unclear",
             "items": [],
             "notes": "test",
         }
         self.error = error
+        self.guardrail = guardrail or {
+            "prompt_injection_detected": False,
+            "risk_level": "none",
+            "signals": [],
+        }
 
-    def analyze_sync(self, filename, content, content_type):
+    def analyze_result_sync(self, filename, content, content_type):
         if self.error:
             raise self.error
-        return self.result
+        return {
+            "observation": self.observation,
+            "guardrail": self.guardrail,
+        }
 
 
 class AwsServiceTests(unittest.TestCase):
@@ -146,6 +200,63 @@ class AwsServiceTests(unittest.TestCase):
         message = json.loads(sqs.messages[0]["MessageBody"])
         self.assertEqual(message["analysis_id"], result["id"])
         self.assertEqual(message["owner"], "user-1")
+        self.assertEqual(repository.quota["user-1"], 1)
+
+    def test_analysis_service_limits_each_account_to_five_requests(self) -> None:
+        repository = FakeRepository()
+        sqs = FakeSqs()
+        service = AnalysisService(
+            self.uploads,
+            repository,
+            sqs,
+            "queue-url",
+            30,
+            account_limit=5,
+        )
+
+        for _ in range(5):
+            service.create("user-1", "waste-images/user-1/image.jpg")
+
+        with self.assertRaises(AnalysisQuotaExceededError):
+            service.create("user-1", "waste-images/user-1/image.jpg")
+        service.create("user-2", "waste-images/user-2/image.jpg")
+
+        self.assertEqual(repository.quota["user-1"], 5)
+        self.assertEqual(repository.quota["user-2"], 1)
+        self.assertEqual(len(sqs.messages), 6)
+
+    def test_queue_failure_keeps_reserved_quota_for_cost_safety(self) -> None:
+        repository = FakeRepository()
+        service = AnalysisService(
+            self.uploads,
+            repository,
+            FakeSqs(RuntimeError("unavailable")),
+            "queue-url",
+            30,
+            account_limit=5,
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "unavailable"):
+            service.create("user-1", "waste-images/user-1/image.jpg")
+
+        self.assertEqual(repository.quota["user-1"], 1)
+        self.assertIn(repository.failed[0][0], repository.records)
+
+    def test_record_creation_failure_releases_reserved_quota(self) -> None:
+        repository = FakeRepository(RuntimeError("write failed"))
+        service = AnalysisService(
+            self.uploads,
+            repository,
+            FakeSqs(),
+            "queue-url",
+            30,
+            account_limit=5,
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "write failed"):
+            service.create("user-1", "waste-images/user-1/image.jpg")
+
+        self.assertEqual(repository.quota["user-1"], 0)
 
     def test_analysis_service_hides_other_owner(self) -> None:
         repository = FakeRepository()
@@ -159,6 +270,20 @@ class AwsServiceTests(unittest.TestCase):
 
         with self.assertRaises(AnalysisNotFoundError):
             service.get_for_owner("user-1", "analysis-1")
+
+    def test_analysis_service_does_not_expose_internal_quota_record(self) -> None:
+        repository = FakeRepository()
+        repository.records["quota"] = {
+            "id": "quota",
+            "owner": "user-1",
+            "record_type": "analysis_quota",
+        }
+        service = AnalysisService(
+            self.uploads, repository, FakeSqs(), "queue-url", 30
+        )
+
+        with self.assertRaises(AnalysisNotFoundError):
+            service.get_for_owner("user-1", "quota")
 
     def test_worker_writes_vlm_observation(self) -> None:
         repository = FakeRepository()
@@ -211,6 +336,35 @@ class AwsServiceTests(unittest.TestCase):
         self.assertEqual(repository.failed[0][0], "analysis-1")
         self.assertEqual(repository.completed, [])
 
+    def test_worker_blocks_prompt_injection_before_persisting_observation(self) -> None:
+        repository = FakeRepository()
+
+        process_record(
+            {
+                "body": json.dumps(
+                    {
+                        "analysis_id": "analysis-1",
+                        "owner": "user-1",
+                        "image_key": "waste-images/user-1/image.jpg",
+                    }
+                )
+            },
+            repository,
+            self.s3,
+            FakeVlmClient(
+                guardrail={
+                    "prompt_injection_detected": True,
+                    "risk_level": "high",
+                    "signals": ["policy_bypass_request"],
+                }
+            ),
+            "images",
+            1024,
+        )
+
+        self.assertEqual(repository.completed, [])
+        self.assertIn("instruction-like text", repository.failed[0][2])
+
     def test_worker_raises_transient_vlm_failure_for_sqs_retry(self) -> None:
         with self.assertRaises(VlmResponseError):
             process_record(
@@ -244,6 +398,20 @@ class AwsServiceTests(unittest.TestCase):
             ":observation"
         ]["items"][0]["confidence"]
         self.assertEqual(confidence, Decimal("0.75"))
+
+    def test_repository_quota_counter_is_atomic_and_account_scoped(self) -> None:
+        table = FakeQuotaTable()
+        repository = AnalysisRepository(table)
+
+        for _ in range(5):
+            repository.reserve_quota("user-1", 5)
+
+        with self.assertRaises(AnalysisQuotaLimitReachedError):
+            repository.reserve_quota("user-1", 5)
+        repository.reserve_quota("user-2", 5)
+
+        self.assertEqual(table.counts["analysis-quota#user-1"], 5)
+        self.assertEqual(table.counts["analysis-quota#user-2"], 1)
 
 
 if __name__ == "__main__":

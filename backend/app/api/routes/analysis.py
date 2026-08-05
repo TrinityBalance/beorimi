@@ -6,6 +6,7 @@ from ...services.vlm_client import (
     VlmClient,
     VlmConfigurationError,
     VlmConnectionError,
+    VlmGuardrailError,
     VlmResponseError,
     VlmTimeoutError,
 )
@@ -46,6 +47,8 @@ async def analyze_waste(
         raise HTTPException(status_code=504, detail="VLM request timed out") from error
     except VlmConnectionError as error:
         raise HTTPException(status_code=502, detail="VLM service is unreachable") from error
+    except VlmGuardrailError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
     except VlmResponseError as error:
         if error.status_code in PASSTHROUGH_VLM_STATUS_CODES:
             raise HTTPException(

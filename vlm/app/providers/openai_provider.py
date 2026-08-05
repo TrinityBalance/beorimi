@@ -29,9 +29,7 @@ class OpenAIVisionProvider:
         model: str | None = None,
         timeout_seconds: float | None = None,
     ) -> None:
-        self.model = model or os.getenv(
-            "OPENAI_VLM_MODEL", os.getenv("VLM_MODEL", DEFAULT_MODEL)
-        )
+        self.model = model or os.getenv("OPENAI_VLM_MODEL", DEFAULT_MODEL)
         self.timeout_seconds = timeout_seconds or float(
             os.getenv("OPENAI_TIMEOUT_SECONDS", str(DEFAULT_TIMEOUT_SECONDS))
         )

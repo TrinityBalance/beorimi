@@ -1,9 +1,9 @@
 import type {
   AnalysisJob,
   AnalysisJobStatus,
-  BackendAnalysisResponse,
   UploadUrlResponse,
-} from "@/types/analysis";
+} from "@/types/api";
+import { isAnalysisResponse } from "@/lib/analysis-contract";
 
 const CONFIGURED_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(
   /\/$/,
@@ -53,7 +53,7 @@ export async function apiRequest<T>(
     const body = (await response.json().catch(() => null)) as
       | { detail?: string; message?: string }
       | null;
-    const knownStatus = [400, 401, 403, 404, 413, 422, 503].includes(
+    const knownStatus = [400, 401, 403, 404, 413, 422, 429, 503].includes(
       response.status,
     );
     throw new BackendApiError(
@@ -189,45 +189,6 @@ function wait(milliseconds: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-function isAnalysisResponse(value: unknown): value is BackendAnalysisResponse {
-  if (!value || typeof value !== "object") return false;
-  const result = value as Partial<BackendAnalysisResponse>;
-
-  return (
-    ["single_item", "multi_item", "unclear"].includes(result.scene_type ?? "") &&
-    Array.isArray(result.items) &&
-    result.items.every(
-      (item) =>
-        Number.isInteger(item?.id) &&
-        typeof item?.label === "string" &&
-        typeof item?.category === "string" &&
-        typeof item?.material === "string" &&
-        Number.isInteger(item?.quantity) &&
-        (item?.longest_side_cm === null ||
-          Number.isInteger(item?.longest_side_cm)) &&
-        typeof item?.size_basis === "string" &&
-        (item?.reference_object === null ||
-          typeof item?.reference_object === "string") &&
-        typeof item?.condition === "string" &&
-        typeof item?.contamination === "string" &&
-        typeof item?.confidence === "number" &&
-        item.confidence >= 0 &&
-        item.confidence <= 1 &&
-        typeof item?.needs_user_confirmation === "boolean" &&
-        (item?.confirm_question === null ||
-          typeof item?.confirm_question === "string") &&
-        (item.bbox === null ||
-          (Array.isArray(item.bbox) &&
-            item.bbox.length === 4 &&
-            item.bbox.every(
-              (coordinate) =>
-                Number.isInteger(coordinate) && coordinate >= 0 && coordinate <= 1000,
-            ))),
-    ) &&
-    typeof result.notes === "string"
-  );
-}
-
 function messageForStatus(status: number): string {
   if (status === 400 || status === 413 || status === 422) {
     return "사진 형식이나 크기를 확인해주세요.";
@@ -237,6 +198,9 @@ function messageForStatus(status: number): string {
   }
   if (status === 404) {
     return "업로드한 사진이나 분석 요청을 찾지 못했어요. 다시 시도해주세요.";
+  }
+  if (status === 429) {
+    return "이 계정의 사진 분석 5회를 모두 사용했어요.";
   }
   if (status === 503) {
     return "분석 서비스가 잠시 바빠요. 잠시 후 다시 시도해주세요.";

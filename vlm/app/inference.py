@@ -12,7 +12,7 @@ from .providers.base import ProviderResponseError, prompt_text
 from .schemas import SCHEMA, structured_output_schema, validate_observation
 
 CACHE_DIR = Path(os.getenv("VLM_CACHE_DIR", str(VLM_ROOT / ".vlm_cache")))
-CACHE_VERSION = "waste-observation-v2"
+CACHE_VERSION = "waste-observation-v3"
 PROMPT_PATH = VLM_ROOT / "prompts" / "waste_classifier.txt"
 
 
@@ -74,7 +74,7 @@ def extract(
         validate_observation(result)
     except ValidationError as error:
         raise ProviderResponseError(
-            f"VLM observation did not match the shared schema: {error.message}"
+            f"VLM observation did not match the internal schema: {error.message}"
         ) from error
 
     _progress(4, "구조화된 응답 검증 완료", verbose)

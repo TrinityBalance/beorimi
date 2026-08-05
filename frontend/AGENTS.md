@@ -17,7 +17,7 @@ rg -n -A 12 "^### [A-Z]+-[0-9]+ \[(OPEN|ACK|BLOCKED|READY)\] → Frontend —" d
 rg -n "^##|^###" docs/frontend.md
 ```
 
-Use `docs/frontend.md` sections only as needed: screens → `MVP 화면 흐름`, API work → `Backend API 사용`, configuration → `환경 변수`, release work → `배포`.
+Use `docs/frontend.md` sections only as needed: screens → `현재 구현`, API work → `분석 흐름`, configuration → `환경 변수`, release work → `배포`.
 
 ## Verification
 

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..auth import AuthenticatedUser, get_current_user
 from ..dependencies import get_upload_service
-from ...schemas.aws_analysis import UploadUrlRequest, UploadUrlResponse
+from ...schemas.upload import UploadUrlRequest, UploadUrlResponse
 from ...services.upload_service import UploadService, UploadValidationError
 
 router = APIRouter()

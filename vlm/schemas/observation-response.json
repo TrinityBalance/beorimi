@@ -10,6 +10,7 @@
     "status",
     "scene_type",
     "image_quality",
+    "security",
     "items",
     "notes"
   ],
@@ -47,6 +48,33 @@
         },
         "retake_required": { "type": "boolean" },
         "retake_message": { "type": ["string", "null"] }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt_injection_detected", "risk_level", "signals"],
+      "properties": {
+        "prompt_injection_detected": { "type": "boolean" },
+        "risk_level": {
+          "type": "string",
+          "enum": ["none", "low", "high"]
+        },
+        "signals": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "string",
+            "enum": [
+              "instruction_like_text",
+              "system_prompt_extraction",
+              "schema_manipulation",
+              "tool_or_action_request",
+              "credential_or_secret_request",
+              "policy_bypass_request"
+            ]
+          }
+        }
       }
     },
     "items": {

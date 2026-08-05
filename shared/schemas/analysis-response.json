@@ -32,7 +32,7 @@
           "bbox"
         ],
         "properties": {
-          "id": { "type": "integer" },
+          "id": { "type": "integer", "minimum": 1 },
           "label": { "type": "string" },
           "category": {
             "type": "string",
@@ -45,7 +45,8 @@
               "packaging",
               "textile",
               "battery_lamp",
-              "other"
+              "other",
+              "unknown"
             ]
           },
           "material": {
@@ -61,11 +62,11 @@
               "unknown"
             ]
           },
-          "quantity": { "type": "integer" },
-          "longest_side_cm": { "type": ["integer", "null"] },
+          "quantity": { "type": "integer", "minimum": 1 },
+          "longest_side_cm": { "type": ["integer", "null"], "minimum": 1 },
           "size_basis": {
             "type": "string",
-            "enum": ["reference_object", "typical_product", "unknown"]
+            "enum": ["reference_object", "visible_label", "typical_product", "unknown"]
           },
           "reference_object": { "type": ["string", "null"] },
           "condition": {
