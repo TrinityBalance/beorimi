@@ -7,6 +7,7 @@ from backend.app.core.config import Settings
 from backend.app.main import app
 from backend.app.services.vlm_client import (
     VlmConnectionError,
+    VlmGuardrailError,
     VlmResponseError,
     VlmTimeoutError,
 )
@@ -84,6 +85,21 @@ class AnalysisEndpointTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 502)
+
+    def test_prompt_injection_guardrail_returns_400(self) -> None:
+        app.dependency_overrides[get_vlm_client] = lambda: FakeVlmClient(
+            error=VlmGuardrailError(
+                "Image contains instruction-like text and cannot be safely analyzed"
+            )
+        )
+
+        response = self.client.post(
+            "/api/analysis",
+            files={"file": ("waste.jpg", b"image", "image/jpeg")},
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("instruction-like text", response.json()["detail"])
 
     def test_vlm_file_error_is_passed_through(self) -> None:
         app.dependency_overrides[get_vlm_client] = lambda: FakeVlmClient(

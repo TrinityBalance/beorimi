@@ -16,6 +16,7 @@ from typing import Any
 
 import boto3
 
+from ..agents.graph import PROMPT_INJECTION_BLOCK_MESSAGE, evaluate_vlm_result
 from ..core.config import settings
 from ..repositories.analysis_repository import AnalysisRepository
 from ..services.upload_service import (
@@ -127,7 +128,7 @@ def process_record(
             owner,
             image_key,
         )
-        observation = vlm_client.analyze_sync(filename, content, content_type)
+        vlm_result = vlm_client.analyze_result_sync(filename, content, content_type)
     except PermanentAnalysisError as error:
         repository.mark_failed(analysis_id, _now_iso(), str(error))
         return
@@ -141,10 +142,22 @@ def process_record(
         )
         return
 
+    guarded_state = evaluate_vlm_result(
+        vlm_result["observation"],
+        vlm_result["guardrail"],
+    )
+    if guarded_state["status"] == "blocked":
+        repository.mark_failed(
+            analysis_id,
+            _now_iso(),
+            PROMPT_INJECTION_BLOCK_MESSAGE,
+        )
+        return
+
     repository.mark_completed(
         analysis_id=analysis_id,
         updated_at=_now_iso(),
-        observation=observation,
+        observation=guarded_state["observation"],
     )
 
 

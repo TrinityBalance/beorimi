@@ -8,8 +8,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..auth import AuthenticatedUser, get_current_user
 from ..dependencies import get_analysis_service
-from ...schemas.aws_analysis import AnalysisCreateRequest, AnalysisRecord
-from ...services.analysis_service import AnalysisNotFoundError, AnalysisService
+from ...schemas.analysis import AnalysisCreateRequest, AnalysisRecord
+from ...services.analysis_service import (
+    AnalysisNotFoundError,
+    AnalysisQuotaExceededError,
+    AnalysisService,
+)
 from ...services.upload_service import (
     UploadedObjectNotFoundError,
     UploadValidationError,
@@ -34,6 +38,8 @@ def create_analysis(
         raise HTTPException(status_code=400, detail=str(error)) from error
     except UploadedObjectNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    except AnalysisQuotaExceededError as error:
+        raise HTTPException(status_code=429, detail=str(error)) from error
     except RuntimeError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
 

@@ -4,6 +4,7 @@
 
 - Own `backend/**`, Backend tests, and `docs/backend.md`.
 - Own the public API, VLM orchestration, waste lookup, RAG, and final disposal decisions.
+- Keep production integration on AWS: Amplify origin → API Gateway Cognito authorizer → API/worker Lambda. Backend must not depend on Cloudflare runtime bindings.
 - Keep HTTP concerns in routes, business operations in services, and data access in repositories.
 - Update `shared/**` before changing a request or response contract.
 
@@ -17,7 +18,7 @@ rg -n -A 12 "^### [A-Z]+-[0-9]+ \[(OPEN|ACK|BLOCKED|READY)\] → Backend —" do
 rg -n "^##|^###" docs/backend.md
 ```
 
-Use `docs/backend.md` sections only as needed: layering → `계층별 작업 원칙`, endpoints → `현재 API`, configuration → `환경 변수`, release work → `배포`.
+Use `docs/backend.md` sections only as needed: layering → `계층별 작업 원칙`, endpoints → `공개 API`, configuration → `환경 변수`, release work → `AWS 배포`.
 
 ## Verification
 

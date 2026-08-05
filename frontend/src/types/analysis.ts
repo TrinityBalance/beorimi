@@ -12,23 +12,6 @@ export type SelectionRegion = {
   height: number;
 };
 
-export type BoundingBox = [number, number, number, number];
-
-export type AnalysisSceneType = "single_item" | "multi_item" | "unclear";
-
-export type BackendAnalysisItem = {
-  id: number;
-  label: string;
-  confidence: number;
-  bbox: BoundingBox | null;
-};
-
-export type BackendAnalysisResponse = {
-  scene_type: AnalysisSceneType;
-  items: BackendAnalysisItem[];
-  notes: string;
-};
-
 export type WasteSizeOption = {
   label: string;
   fee: number;
@@ -41,17 +24,10 @@ export type WasteCatalogItem = {
   sizeGuide?: string;
 };
 
-export type AnalyzeRouteResponse = BackendAnalysisResponse & {
-  demo?: boolean;
-  feeEstimates?: Record<string, number>;
-  catalog?: WasteCatalogItem[];
-};
-
 export type DetectedWasteItem = BackendAnalysisItem & {
   selected: boolean;
   estimatedFee?: number;
   detectedLabel?: string;
-  quantity?: number;
   size?: string;
   userConfirmed?: boolean;
 };
@@ -106,3 +82,19 @@ export type MultiWasteAnalysisResult = {
 export type WasteAnalysisResult =
   | LegacyWasteAnalysisResult
   | MultiWasteAnalysisResult;
+import type {
+  AnalysisSceneType,
+  BackendAnalysisItem,
+} from "./api";
+
+export type {
+  AnalysisCategory,
+  AnalysisJob,
+  AnalysisJobStatus,
+  AnalysisMaterial,
+  AnalysisSceneType,
+  BackendAnalysisItem,
+  BackendAnalysisResponse,
+  BoundingBox,
+  UploadUrlResponse,
+} from "./api";

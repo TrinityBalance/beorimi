@@ -2,6 +2,8 @@
 
 Backend 담당자가 소유하는 AWS 리소스와 배포 절차입니다. Frontend/VLM 변경은 각 담당자에게 `docs/cowork_ground.md`로 요청합니다.
 
+운영 배포 경로는 AWS로 통일합니다. Frontend는 Amplify, 공개 API는 API Gateway, Backend 실행 환경은 Lambda이며, 이 인프라는 Cloudflare Workers·Pages·D1·R2 설정을 사용하지 않습니다.
+
 ## 권장 스택
 
 `backend-secure.yaml`은 서울 리전에서 다음을 생성합니다.

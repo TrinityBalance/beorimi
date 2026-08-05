@@ -7,26 +7,39 @@ import {
   getSelectedRegion,
   saveResult,
 } from "@/lib/analysis-store";
+import { BackendApiError, uploadAndStartAnalysis } from "@/lib/api";
+import { AuthRequiredError, getAccessToken } from "@/lib/auth";
 import { cropPhoto, dataUrlToBlob } from "@/lib/image";
-import type {
-  AnalyzeRouteResponse,
-  MultiWasteAnalysisResult,
-} from "@/types/analysis";
+import type { AnalysisJobStatus, MultiWasteAnalysisResult } from "@/types/analysis";
 
 const stages = [
-  { title: "사진 속 물체 찾기", description: "버릴 물건의 위치를 찾고 있어요" },
+  { title: "사진 업로드", description: "사진을 안전하게 전송하고 있어요" },
+  { title: "분석 준비", description: "분석 작업을 접수하고 있어요" },
   { title: "품목 판독", description: "물건마다 종류와 특징을 살펴봐요" },
-  { title: "결과 목록 만들기", description: "찾은 물건을 보기 쉽게 정리해요" },
+  { title: "결과 정리", description: "찾은 물건을 보기 쉽게 정리해요" },
 ];
+
+const stageByStatus: Record<AnalysisJobStatus | "uploading", number> = {
+  uploading: 0,
+  queued: 1,
+  processing: 2,
+  completed: 3,
+  failed: 2,
+};
 
 export default function AnalyzePage() {
   const router = useRouter();
-  const startedRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
   const [activeStage, setActiveStage] = useState(0);
   const [error, setError] = useState("");
   const [photoUrl, setPhotoUrl] = useState("");
+  const [quotaExhausted, setQuotaExhausted] = useState(false);
 
   const runAnalysis = useCallback(async () => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     const photo = getPendingPhoto();
     const region = getSelectedRegion();
 
@@ -36,35 +49,27 @@ export default function AnalyzePage() {
     }
 
     setError("");
+    setQuotaExhausted(false);
     setActiveStage(0);
-
-    const stageTwo = window.setTimeout(() => setActiveStage(1), 700);
-    const stageThree = window.setTimeout(() => setActiveStage(2), 1450);
 
     try {
       const analysisPhoto = region ? await cropPhoto(photo, region) : photo;
       setPhotoUrl(analysisPhoto.dataUrl);
-
-      const formData = new FormData();
-      formData.append(
-        "image",
-        dataUrlToBlob(analysisPhoto.dataUrl),
+      const image = dataUrlToBlob(analysisPhoto.dataUrl);
+      const accessToken = await getAccessToken();
+      const job = await uploadAndStartAnalysis(
+        image,
         analysisPhoto.name,
+        accessToken,
+        {
+          signal: controller.signal,
+          onStatus: (status) => setActiveStage(stageByStatus[status]),
+        },
       );
-
-      const minimumDelay = new Promise((resolve) => setTimeout(resolve, 2300));
-      const request = fetch("/api/analyze", {
-        method: "POST",
-        body: formData,
-      }).then(async (response) => {
-        if (!response.ok) {
-          const body = (await response.json()) as { message?: string };
-          throw new Error(body.message ?? "분석 요청에 실패했어요.");
-        }
-        return response.json() as Promise<AnalyzeRouteResponse>;
-      });
-
-      const [result] = await Promise.all([request, minimumDelay]);
+      const result = job.observation;
+      if (!result) {
+        throw new Error("분석 결과를 불러오지 못했어요.");
+      }
       if (result.items.length === 0) {
         throw new Error(
           "사진에서 대형 폐기물을 찾지 못했어요. 물건이 크게 보이는 사진으로 다시 시도해주세요.",
@@ -73,8 +78,8 @@ export default function AnalyzePage() {
 
       const completed: MultiWasteAnalysisResult = {
         kind: "multi",
-        id: crypto.randomUUID(),
-        createdAt: new Date().toISOString(),
+        id: job.id,
+        createdAt: job.created_at,
         district: "서울 강남구",
         image: analysisPhoto.dataUrl,
         imageName: analysisPhoto.name,
@@ -82,41 +87,46 @@ export default function AnalyzePage() {
         imageHeight: analysisPhoto.height,
         region,
         sceneType: result.scene_type,
-        items: result.items.map((item) => {
-          const catalogItem = result.catalog?.find((entry) => entry.name === item.label);
-          const estimatedFee = result.feeEstimates?.[String(item.id)];
-          const matchingSize = catalogItem?.sizes.find(
-            (size) => size.fee === estimatedFee,
-          );
-
-          return {
-            ...item,
-            selected: true,
-            detectedLabel: item.label,
-            quantity: 1,
-            size: matchingSize?.label ?? catalogItem?.sizes[0]?.label,
-            estimatedFee,
-            userConfirmed: false,
-          };
-        }),
+        items: result.items.map((item) => ({
+          ...item,
+          selected: true,
+          detectedLabel: item.label,
+          quantity: Math.max(1, item.quantity),
+          size: item.longest_side_cm
+            ? `최장변 약 ${item.longest_side_cm}cm`
+            : undefined,
+          userConfirmed: !item.needs_user_confirmation,
+        })),
         notes: result.notes,
-        demo: result.demo,
-        catalog: result.catalog,
       };
       saveResult(completed);
       router.replace(`/result/${completed.id}`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "잠시 후 다시 시도해주세요.");
+      if (isAbortError(caught)) return;
+      if (
+        caught instanceof AuthRequiredError ||
+        (caught instanceof BackendApiError && [401, 403].includes(caught.status))
+      ) {
+        router.replace("/login?next=/analyze&reason=expired");
+        return;
+      }
+      if (caught instanceof BackendApiError && caught.status === 429) {
+        setQuotaExhausted(true);
+      }
+      setError(
+        caught instanceof Error ? caught.message : "잠시 후 다시 시도해주세요.",
+      );
     } finally {
-      window.clearTimeout(stageTwo);
-      window.clearTimeout(stageThree);
+      if (abortRef.current === controller) abortRef.current = null;
     }
   }, [router]);
 
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    void runAnalysis();
+    const start = window.setTimeout(() => void runAnalysis(), 0);
+    return () => {
+      window.clearTimeout(start);
+      abortRef.current?.abort();
+    };
   }, [runAnalysis]);
 
   return (
@@ -173,11 +183,26 @@ export default function AnalyzePage() {
         <div className="analysis-error" role="alert">
           <strong>분석을 마치지 못했어요</strong>
           <p>{error}</p>
-          <button type="button" onClick={() => void runAnalysis()}>다시 시도</button>
+          <button
+            type="button"
+            onClick={() => {
+              if (quotaExhausted) {
+                router.replace("/");
+                return;
+              }
+              void runAnalysis();
+            }}
+          >
+            {quotaExhausted ? "홈으로 돌아가기" : "다시 시도"}
+          </button>
         </div>
       )}
 
       <p className="analysis-privacy"><span aria-hidden="true">✓</span> 사진은 판별 목적으로만 사용돼요</p>
     </main>
   );
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
 }

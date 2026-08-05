@@ -40,7 +40,6 @@ class Settings:
     vlm_service_token: str = os.getenv("VLM_SERVICE_TOKEN", "")
     vlm_timeout_seconds: float = _positive_float("VLM_TIMEOUT_SECONDS", 90.0)
     max_upload_bytes: int = _positive_int("MAX_UPLOAD_BYTES", 4 * 1024 * 1024)
-    database_url: str = os.getenv("DATABASE_URL", "sqlite:///./beorimi.db")
     # AIDEV-NOTE: 배포 시 Amplify 도메인을 반드시 추가해야 프론트 호출이 통과한다.
     #             콤마로 구분하며, 스킴·포트까지 정확히 일치해야 한다(https:// 포함, 끝 슬래시 없음).
     cors_allow_origins: tuple[str, ...] = _parse_origins(
@@ -57,6 +56,7 @@ class Settings:
         "MAX_SOURCE_IMAGE_BYTES", 10 * 1024 * 1024
     )
     analysis_retention_days: int = _positive_int("ANALYSIS_RETENTION_DAYS", 30)
+    analysis_account_limit: int = _positive_int("ANALYSIS_ACCOUNT_LIMIT", 5)
     analysis_max_receive_count: int = _positive_int(
         "ANALYSIS_MAX_RECEIVE_COUNT", 3
     )

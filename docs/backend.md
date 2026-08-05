@@ -22,7 +22,7 @@ Frontend
 
 API Gateway가 Cognito JWT를 검증하고, Backend는 전달된 `sub`를 사용자 식별자의 기준으로 사용합니다. Identity Pool의 `identityId`와 혼용하지 않습니다.
 
-실제 VLM 호출은 API Gateway의 최대 통합 시간보다 길 수 있으므로 worker에서 비동기로 실행합니다. Worker는 S3 객체를 재검증한 뒤 서비스 토큰으로 VLM을 호출하고 관찰 결과를 DynamoDB에 저장합니다.
+실제 VLM 호출은 API Gateway의 최대 통합 시간보다 길 수 있으므로 worker에서 비동기로 실행합니다. Worker는 S3 객체를 재검증한 뒤 서비스 토큰으로 VLM을 호출하고, 내부 VLM 응답을 Pydantic으로 검증합니다. 이어서 LangGraph 프롬프트 인젝션 가드를 통과한 공용 관찰 결과만 DynamoDB에 저장합니다.
 
 기존 `POST /api/analysis` 동기식 경로는 로컬 호환용입니다. 운영 HTTP API Gateway에는 노출하지 않습니다.
 
@@ -36,8 +36,11 @@ backend/app/
 ├─ services/            # 업로드·분석 작업 흐름
 ├─ repositories/        # DynamoDB 접근
 ├─ workers/             # SQS 비동기 처리
-├─ schemas/             # Pydantic 입출력 모델
-├─ agents/              # 향후 VLM/RAG 오케스트레이션
+├─ schemas/
+│  ├─ upload.py         # 업로드 요청·응답
+│  ├─ analysis.py       # 공개 분석 작업·관찰
+│  └─ vlm.py            # Backend↔VLM 내부 응답
+├─ agents/              # LangGraph 이미지 가드와 향후 VLM/RAG 오케스트레이션
 └─ core/                # 환경 설정
 ```
 
@@ -49,7 +52,7 @@ Routes는 HTTP 처리, Services는 업무 흐름, Repositories는 저장소 접�
 | --- | --- | --- | --- |
 | GET | `/api/health` | 없음 | Backend 상태 확인 |
 | POST | `/api/uploads` | Cognito JWT | 크기 제한이 적용된 사용자 전용 S3 POST form 생성 |
-| POST | `/api/analyses` | Cognito JWT | 업로드 확인 후 분석 작업 생성(202) |
+| POST | `/api/analyses` | Cognito JWT | 업로드 확인 후 분석 작업 생성(202), 계정 누적 5회 초과 시 429 |
 | GET | `/api/analyses/{id}` | Cognito JWT | 본인 작업 상태와 결과 조회 |
 | POST | `/api/analysis` | 로컬 전용 | 동기 VLM 호출, 운영 Gateway 미노출 |
 
@@ -74,7 +77,21 @@ queued → processing → completed
 
 DynamoDB 레코드는 기본 30일 후 TTL 정리 대상입니다. 원본 S3 이미지도 같은 기간 후 lifecycle로 만료됩니다. TTL/lifecycle 삭제 시점은 즉시가 아닐 수 있습니다.
 
-## 계획된 LangGraph 흐름
+계정별 MVP 한도는 JWT의 `sub`마다 누적 5회입니다. 같은 DynamoDB 테이블의 `analysis-quota#{sub}` 레코드를 조건부 증가해 동시 요청을 막고, quota 레코드에는 TTL을 두지 않습니다. 이미지 검증 전에 실패한 요청은 차감하지 않으며, SQS 전송을 시도한 뒤의 불명확한 장애는 비용 상한을 지키기 위해 차감을 유지합니다.
+
+## LangGraph 흐름
+
+현재 worker 저장 전 가드:
+
+```text
+START → inspect_prompt_injection
+          ├─ allow → record_observation → END → DynamoDB completed
+          └─ block → block_observation  → END → DynamoDB failed
+```
+
+VLM의 구조화된 `guardrail` 신호가 하나라도 있거나 신호 필드가 서로 모순되면 닫힌 상태로 실패합니다. VLM이 안전하다고 표시해도 공용 관찰 자유 텍스트에 시스템 프롬프트·명령 실행·비밀 키 요청 같은 흔적이 남으면 차단합니다. 의심 문구 원문은 오류나 로그에 남기지 않으며 안전한 고정 오류만 저장합니다.
+
+향후 품목·규정 오케스트레이션:
 
 ```text
 START → analyze_image → classify_items → retrieve_regulations → validate_results
@@ -97,6 +114,7 @@ START → analyze_image → classify_items → retrieve_regulations → validate
 | `PRESIGNED_URL_TTL_SECONDS` | `300` | 업로드 URL 유효 시간 |
 | `MAX_SOURCE_IMAGE_BYTES` | `10485760` | S3 원본 이미지 상한 |
 | `ANALYSIS_RETENTION_DAYS` | `30` | 작업·이미지 보존 기간 |
+| `ANALYSIS_ACCOUNT_LIMIT` | `5` | Cognito `sub`별 누적 분석 접수 상한 |
 | `CORS_ALLOW_ORIGINS` | `http://localhost:3000` | 콤마 구분 Frontend origin |
 | `VLM_BASE_URL` | `http://localhost:8001` | Worker·레거시 VLM 주소 |
 | `VLM_SERVICE_TOKEN` | 없음 | Backend→VLM 인증 |
@@ -119,6 +137,8 @@ python -m pytest backend/tests
 
 ## AWS 배포
 
+- 운영 경로는 `AWS Amplify → API Gateway HTTP API → Lambda`로 통일합니다. Backend는 Cloudflare Workers·Pages·D1·R2 바인딩에 의존하지 않습니다.
+- CORS에는 실제 Amplify 운영 origin만 정확히 등록하며, 사용하지 않는 미리보기·대체 호스팅 origin은 추가하지 않습니다.
 - 배포 템플릿: `infra/backend-secure.yaml` — Cognito, S3, DynamoDB, SQS, API/worker Lambda, HTTP API
 - 패키징: `infra/build-backend-lambda.ps1`
 - 배포: `infra/deploy-backend-secure.ps1`

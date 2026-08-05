@@ -8,6 +8,14 @@ import json
 from decimal import Decimal
 from typing import Any
 
+from botocore.exceptions import ClientError
+
+QUOTA_ITEM_PREFIX = "analysis-quota#"
+
+
+class AnalysisQuotaLimitReachedError(RuntimeError):
+    pass
+
 
 class AnalysisRepository:
     def __init__(self, table: Any) -> None:
@@ -30,6 +38,42 @@ class AnalysisRepository:
             ConsistentRead=True,
         )
         return response.get("Item")
+
+    def reserve_quota(self, owner: str, limit: int) -> None:
+        try:
+            self._table.update_item(
+                Key={"id": f"{QUOTA_ITEM_PREFIX}{owner}"},
+                UpdateExpression=(
+                    "SET record_type = if_not_exists(record_type, :record_type), "
+                    "owner = if_not_exists(owner, :owner) "
+                    "ADD analysis_count :one"
+                ),
+                ConditionExpression=(
+                    "attribute_not_exists(analysis_count) OR analysis_count < :limit"
+                ),
+                ExpressionAttributeValues={
+                    ":record_type": "analysis_quota",
+                    ":owner": owner,
+                    ":one": 1,
+                    ":limit": limit,
+                },
+            )
+        except ClientError as error:
+            if error.response.get("Error", {}).get("Code") == (
+                "ConditionalCheckFailedException"
+            ):
+                raise AnalysisQuotaLimitReachedError from error
+            raise
+
+    def release_quota(self, owner: str) -> None:
+        # AIDEV-NOTE: quota item에는 expires_at을 두지 않는다. 분석·이미지는 30일 후 지워져도
+        #             계정별 MVP 5회 제한은 누적으로 유지해야 한다.
+        self._table.update_item(
+            Key={"id": f"{QUOTA_ITEM_PREFIX}{owner}"},
+            UpdateExpression="ADD analysis_count :minus_one",
+            ConditionExpression="analysis_count >= :one",
+            ExpressionAttributeValues={":minus_one": -1, ":one": 1},
+        )
 
     def mark_processing(self, analysis_id: str, updated_at: str) -> None:
         # AIDEV-NOTE: status 는 DynamoDB 예약어라 식에 직접 못 쓴다. 아래 파일 전체가

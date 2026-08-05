@@ -18,6 +18,11 @@ Parameters:
     Default: 30
     MinValue: 1
     MaxValue: 365
+  AnalysisAccountLimit:
+    Type: Number
+    Default: 5
+    MinValue: 1
+    MaxValue: 100
   MaxSourceImageBytes:
     Type: Number
     Default: 10485760
@@ -265,6 +270,7 @@ Resources:
           PRESIGNED_URL_TTL_SECONDS: "300"
           MAX_SOURCE_IMAGE_BYTES: !Ref MaxSourceImageBytes
           ANALYSIS_RETENTION_DAYS: !Ref AnalysisRetentionDays
+          ANALYSIS_ACCOUNT_LIMIT: !Ref AnalysisAccountLimit
           CORS_ALLOW_ORIGINS: !Ref FrontendOrigin
 
   WorkerFunction:

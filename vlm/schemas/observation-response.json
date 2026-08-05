@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "observation-response.json",
+  "title": "VlmObservationResponse",
+  "description": "VLM 공급자와 무관한 대형 폐기물 이미지 관찰 결과",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "scene_type",
+    "image_quality",
+    "security",
+    "items",
+    "notes"
+  ],
+  "properties": {
+    "schema_version": { "type": "string", "enum": ["1.0"] },
+    "status": {
+      "type": "string",
+      "enum": ["success", "retake_required", "unsupported"]
+    },
+    "scene_type": {
+      "type": "string",
+      "enum": ["single_item", "multi_item", "unclear"]
+    },
+    "image_quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["usable", "issues", "retake_required", "retake_message"],
+      "properties": {
+        "usable": { "type": "boolean" },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "blur",
+              "too_dark",
+              "too_bright",
+              "object_too_small",
+              "object_cut_off",
+              "heavy_occlusion",
+              "unsupported_content",
+              "other"
+            ]
+          }
+        },
+        "retake_required": { "type": "boolean" },
+        "retake_message": { "type": ["string", "null"] }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt_injection_detected", "risk_level", "signals"],
+      "properties": {
+        "prompt_injection_detected": { "type": "boolean" },
+        "risk_level": {
+          "type": "string",
+          "enum": ["none", "low", "high"]
+        },
+        "signals": {
+          "type": "array",
+          "maxItems": 6,
+          "items": {
+            "type": "string",
+            "enum": [
+              "instruction_like_text",
+              "system_prompt_extraction",
+              "schema_manipulation",
+              "tool_or_action_request",
+              "credential_or_secret_request",
+              "policy_bypass_request"
+            ]
+          }
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "category",
+          "alternatives",
+          "material",
+          "quantity",
+          "condition",
+          "contamination",
+          "estimated_longest_side_cm",
+          "size_basis",
+          "reference_object",
+          "measurement_required",
+          "confidence",
+          "confidence_tier",
+          "needs_user_confirmation",
+          "confirm_question",
+          "bbox",
+          "visual_evidence"
+        ],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 },
+          "label": { "type": "string" },
+          "category": {
+            "type": "string",
+            "enum": [
+              "furniture",
+              "appliance_large",
+              "appliance_small",
+              "bedding",
+              "container",
+              "packaging",
+              "textile",
+              "battery_lamp",
+              "other",
+              "unknown"
+            ]
+          },
+          "alternatives": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["label", "reason"],
+              "properties": {
+                "label": { "type": "string" },
+                "reason": { "type": "string" }
+              }
+            }
+          },
+          "material": {
+            "type": "string",
+            "enum": [
+              "fabric",
+              "wood",
+              "metal",
+              "plastic",
+              "glass",
+              "paper",
+              "mixed",
+              "unknown"
+            ]
+          },
+          "quantity": { "type": "integer", "minimum": 1 },
+          "condition": {
+            "type": "string",
+            "enum": ["intact", "minor_damage", "broken", "unknown"]
+          },
+          "contamination": {
+            "type": "string",
+            "enum": ["clean", "residue", "unknown"]
+          },
+          "estimated_longest_side_cm": {
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "size_basis": {
+            "type": "string",
+            "enum": ["reference_object", "visible_label", "unknown"]
+          },
+          "reference_object": { "type": ["string", "null"] },
+          "measurement_required": { "type": "boolean" },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "confidence_tier": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "needs_user_confirmation": { "type": "boolean" },
+          "confirm_question": { "type": ["string", "null"] },
+          "bbox": {
+            "type": ["array", "null"],
+            "items": { "type": "integer", "minimum": 0, "maximum": 1000 },
+            "minItems": 4,
+            "maxItems": 4
+          },
+          "visual_evidence": {
+            "type": "array",
+            "maxItems": 5,
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "notes": { "type": "string" }
+  }
+}

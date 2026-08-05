@@ -1,11 +1,15 @@
 import unittest
+from decimal import Decimal
 
 from fastapi.testclient import TestClient
 
 from backend.app.api.auth import AuthenticatedUser, get_current_user
 from backend.app.api.dependencies import get_analysis_service, get_upload_service
 from backend.app.main import app
-from backend.app.services.analysis_service import AnalysisNotFoundError
+from backend.app.services.analysis_service import (
+    AnalysisNotFoundError,
+    AnalysisQuotaExceededError,
+)
 from backend.app.services.upload_service import (
     UploadedObjectNotFoundError,
     UploadValidationError,
@@ -156,6 +160,21 @@ class SecureApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_create_analysis_returns_429_after_account_limit(self) -> None:
+        self.authenticate()
+        app.dependency_overrides[get_analysis_service] = lambda: FakeAnalysisService(
+            error=AnalysisQuotaExceededError(
+                "Account analysis limit of 5 has been reached"
+            )
+        )
+
+        response = self.client.post(
+            "/api/analyses",
+            json={"image_key": "waste-images/user-123/image.jpg"},
+        )
+
+        self.assertEqual(response.status_code, 429)
+
     def test_get_analysis_hides_other_users_records(self) -> None:
         self.authenticate()
         app.dependency_overrides[get_analysis_service] = lambda: FakeAnalysisService(
@@ -165,6 +184,50 @@ class SecureApiTests(unittest.TestCase):
         response = self.client.get("/api/analyses/other-users-analysis")
 
         self.assertEqual(response.status_code, 404)
+
+    def test_get_completed_analysis_serializes_validated_vlm_observation(
+        self,
+    ) -> None:
+        self.authenticate()
+        record = analysis_record(
+            "user-123",
+            "waste-images/user-123/image.jpg",
+        )
+        record.update(
+            {
+                "status": "completed",
+                "observation": {
+                    "scene_type": "single_item",
+                    "items": [
+                        {
+                            "id": 1,
+                            "label": "소파",
+                            "category": "furniture",
+                            "material": "fabric",
+                            "quantity": 1,
+                            "longest_side_cm": None,
+                            "size_basis": "unknown",
+                            "reference_object": None,
+                            "condition": "intact",
+                            "contamination": "clean",
+                            "confidence": Decimal("0.88"),
+                            "needs_user_confirmation": True,
+                            "confirm_question": "크기를 확인해주세요.",
+                            "bbox": [100, 200, 900, 900],
+                        }
+                    ],
+                    "notes": "",
+                },
+            }
+        )
+        app.dependency_overrides[get_analysis_service] = lambda: FakeAnalysisService(
+            result=record
+        )
+
+        response = self.client.get("/api/analyses/analysis-1")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["observation"]["items"][0]["confidence"], 0.88)
 
 
 if __name__ == "__main__":

@@ -9,14 +9,13 @@ applications:
           commands:
             - nvm use 22
             - npm ci
-            # Next.js SSR 런타임에서도 API Gateway 주소를 읽을 수 있도록
-            # 공개 설정만 .env.production에 기록한다. 비밀값은 추가하지 않는다.
             - test -n "$NEXT_PUBLIC_API_BASE_URL"
-            - printf "NEXT_PUBLIC_API_BASE_URL=%s\nBACKEND_API_BASE_URL=%s\nANALYSIS_DEMO_MODE=%s\n" "$NEXT_PUBLIC_API_BASE_URL" "${BACKEND_API_BASE_URL:-$NEXT_PUBLIC_API_BASE_URL}" "${ANALYSIS_DEMO_MODE:-true}" > .env.production
+            - test -n "$NEXT_PUBLIC_COGNITO_USER_POOL_ID"
+            - test -n "$NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID"
         build:
           commands:
-            # NEXT_PUBLIC_* 는 빌드 시점에 번들에 박히므로
-            # Amplify 콘솔의 환경 변수에 NEXT_PUBLIC_API_BASE_URL 을 반드시 등록해야 한다.
+            # NEXT_PUBLIC_* 는 빌드 시점에 번들에 포함되므로
+            # API Gateway와 Cognito의 공개 설정을 Amplify 환경 변수에 등록해야 한다.
             - npm run build
       artifacts:
         baseDirectory: .next

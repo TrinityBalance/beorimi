@@ -10,8 +10,8 @@ run:
   network:
     port: 8080
   env:
-    - name: VLM_MODEL
-      value: gpt-5.6
-    # AIDEV-NOTE: OPENAI_API_KEY 는 여기에 절대 적지 않는다. 이 파일은 깃에 커밋된다.
-    #             App Runner 콘솔 > Configuration > Environment 에서
-    #             Secrets Manager 또는 SSM Parameter Store 참조로 주입한다.
+    - name: OPENAI_VLM_MODEL
+      value: gpt-5.6-sol
+    # AIDEV-NOTE: OPENAI_API_KEY 와 VLM_SERVICE_TOKEN 은 여기에 절대 적지 않는다.
+    #             이 파일은 깃에 커밋되므로 App Runner 콘솔 > Configuration >
+    #             Environment 에서 Secrets Manager 또는 SSM 참조로 주입한다.

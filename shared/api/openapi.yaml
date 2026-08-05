@@ -103,6 +103,8 @@ paths:
           description: Missing or invalid Cognito token
         "404":
           description: Uploaded image does not exist
+        "429":
+          description: Authenticated account has used all five MVP analyses
         "503":
           description: Analysis queue is not configured
   /api/analyses/{analysis_id}:

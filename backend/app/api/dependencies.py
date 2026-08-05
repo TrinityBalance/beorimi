@@ -76,4 +76,5 @@ def get_analysis_service() -> AnalysisService:
         sqs_client=get_sqs_client(),
         queue_url=settings.analysis_queue_url,
         retention_days=settings.analysis_retention_days,
+        account_limit=settings.analysis_account_limit,
     )

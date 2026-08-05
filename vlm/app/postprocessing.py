@@ -34,7 +34,7 @@ def render_overlay(
         draw.rectangle(
             (x1, y1, x2, y2), outline=color, width=max(3, width // 250)
         )
-        size = item.get("longest_side_cm")
+        size = item.get("estimated_longest_side_cm")
         size_text = f"약 {size}cm" if size is not None else "크기 확인 필요"
         label = (
             f"{item['id']}. {item['label']} · {size_text} · "
