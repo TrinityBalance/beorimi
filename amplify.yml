@@ -1,0 +1,23 @@
+version: 1
+applications:
+  # 모노레포이므로 appRoot로 프론트 디렉터리를 지정한다.
+  # Amplify 콘솔에서 앱을 연결할 때 이 파일이 자동으로 감지된다.
+  - appRoot: frontend
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm ci
+        build:
+          commands:
+            # NEXT_PUBLIC_* 는 빌드 시점에 번들에 박히므로
+            # Amplify 콘솔의 환경 변수에 NEXT_PUBLIC_API_BASE_URL 을 반드시 등록해야 한다.
+            - npm run build
+      artifacts:
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - .next/cache/**/*
+          - node_modules/**/*

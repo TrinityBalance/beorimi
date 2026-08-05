@@ -1,0 +1,17 @@
+version: 1.0
+runtime: python311
+build:
+  commands:
+    build:
+      - pip install -r requirements.txt
+run:
+  runtime-version: 3.11.9
+  command: uvicorn app.main:app --host 0.0.0.0 --port 8080
+  network:
+    port: 8080
+  env:
+    - name: VLM_MODEL
+      value: gpt-5.6
+    # AIDEV-NOTE: OPENAI_API_KEY 는 여기에 절대 적지 않는다. 이 파일은 깃에 커밋된다.
+    #             App Runner 콘솔 > Configuration > Environment 에서
+    #             Secrets Manager 또는 SSM Parameter Store 참조로 주입한다.

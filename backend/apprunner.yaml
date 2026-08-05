@@ -1,0 +1,22 @@
+version: 1.0
+runtime: python311
+build:
+  commands:
+    build:
+      - pip install -r requirements.txt
+run:
+  runtime-version: 3.11.9
+  # App Runner 는 컨테이너 포트로 8080 을 기본 사용한다.
+  command: uvicorn app.main:app --host 0.0.0.0 --port 8080
+  network:
+    port: 8080
+  env:
+    - name: APP_NAME
+      value: Beorimi API
+    # AIDEV-NOTE: vlm 서비스를 먼저 배포한 뒤 발급된 App Runner 도메인으로 교체해야 한다.
+    #             backend→vlm 은 퍼블릭 HTTPS 경유이므로 https:// 를 유지한다.
+    - name: VLM_BASE_URL
+      value: https://REPLACE-WITH-VLM-SERVICE.ap-northeast-2.awsapprunner.com
+    # AIDEV-NOTE: Amplify 배포 후 발급되는 도메인으로 교체한다. 값이 틀리면 프론트 호출이 CORS 로 전부 막힌다.
+    - name: CORS_ALLOW_ORIGINS
+      value: https://main.REPLACE-WITH-AMPLIFY-APP-ID.amplifyapp.com
