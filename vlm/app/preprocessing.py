@@ -2,6 +2,7 @@ import base64
 import hashlib
 import io
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
@@ -15,10 +16,22 @@ MAX_EDGE = 1024
 SUPPORTED_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 
-def prepare_image(path: str | Path) -> tuple[str, str]:
-    image = Image.open(path)
-    if image.mode not in ("RGB", "L"):
-        image = image.convert("RGB")
+@dataclass(frozen=True)
+class PreparedImage:
+    jpeg_bytes: bytes
+    digest: str
+    width: int
+    height: int
+
+    @property
+    def data_url(self) -> str:
+        encoded = base64.b64encode(self.jpeg_bytes).decode("ascii")
+        return f"data:image/jpeg;base64,{encoded}"
+
+
+def prepare_image(path: str | Path) -> PreparedImage:
+    with Image.open(path) as source:
+        image = source.convert("RGB")
 
     width, height = image.size
     if max(width, height) > MAX_EDGE:
@@ -30,7 +43,13 @@ def prepare_image(path: str | Path) -> tuple[str, str]:
     buffer = io.BytesIO()
     image.convert("RGB").save(buffer, format="JPEG", quality=85)
     raw = buffer.getvalue()
-    return base64.b64encode(raw).decode(), hashlib.sha1(raw).hexdigest()
+    final_width, final_height = image.size
+    return PreparedImage(
+        jpeg_bytes=raw,
+        digest=hashlib.sha256(raw).hexdigest(),
+        width=final_width,
+        height=final_height,
+    )
 
 
 def images_in_directory(directory: str | Path) -> list[Path]:

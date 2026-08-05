@@ -1,93 +1,33 @@
-SCHEMA = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": ["scene_type", "items", "notes"],
-    "properties": {
-        "scene_type": {
-            "type": "string",
-            "enum": ["single_item", "multi_item", "unclear"],
-        },
-        "items": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": False,
-                "required": [
-                    "id",
-                    "label",
-                    "category",
-                    "material",
-                    "quantity",
-                    "longest_side_cm",
-                    "size_basis",
-                    "reference_object",
-                    "condition",
-                    "contamination",
-                    "confidence",
-                    "needs_user_confirmation",
-                    "confirm_question",
-                    "bbox",
-                ],
-                "properties": {
-                    "id": {"type": "integer"},
-                    "label": {
-                        "type": "string",
-                        "description": "수수료표 매칭에 사용할 한국어 일반 품목명",
-                    },
-                    "category": {
-                        "type": "string",
-                        "enum": [
-                            "furniture",
-                            "appliance_large",
-                            "appliance_small",
-                            "bedding",
-                            "container",
-                            "packaging",
-                            "textile",
-                            "battery_lamp",
-                            "other",
-                        ],
-                    },
-                    "material": {
-                        "type": "string",
-                        "enum": [
-                            "fabric",
-                            "wood",
-                            "metal",
-                            "plastic",
-                            "glass",
-                            "paper",
-                            "mixed",
-                            "unknown",
-                        ],
-                    },
-                    "quantity": {"type": "integer"},
-                    "longest_side_cm": {"type": ["integer", "null"]},
-                    "size_basis": {
-                        "type": "string",
-                        "enum": ["reference_object", "typical_product", "unknown"],
-                    },
-                    "reference_object": {"type": ["string", "null"]},
-                    "condition": {
-                        "type": "string",
-                        "enum": ["intact", "minor_damage", "broken", "unknown"],
-                    },
-                    "contamination": {
-                        "type": "string",
-                        "enum": ["clean", "residue", "unknown"],
-                    },
-                    "confidence": {"type": "number"},
-                    "needs_user_confirmation": {"type": "boolean"},
-                    "confirm_question": {"type": ["string", "null"]},
-                    "bbox": {
-                        "type": ["array", "null"],
-                        "items": {"type": "integer", "minimum": 0, "maximum": 1000},
-                        "minItems": 4,
-                        "maxItems": 4,
-                    },
-                },
-            },
-        },
-        "notes": {"type": "string"},
-    },
-}
+import copy
+import json
+from pathlib import Path
+
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import ValidationError
+
+VLM_ROOT = Path(__file__).resolve().parents[1]
+OBSERVATION_SCHEMA_PATH = VLM_ROOT / "schemas" / "observation-response.json"
+
+
+def _load_schema() -> dict:
+    return json.loads(OBSERVATION_SCHEMA_PATH.read_text(encoding="utf-8"))
+
+
+SCHEMA = _load_schema()
+VALIDATOR = Draft202012Validator(SCHEMA)
+
+
+def structured_output_schema() -> dict:
+    schema = copy.deepcopy(SCHEMA)
+    for metadata_key in ("$schema", "$id", "title"):
+        schema.pop(metadata_key, None)
+    return schema
+
+
+def validate_observation(observation: dict) -> dict:
+    errors = sorted(VALIDATOR.iter_errors(observation), key=lambda error: list(error.path))
+    if errors:
+        first = errors[0]
+        location = ".".join(str(part) for part in first.path) or "response"
+        raise ValidationError(f"{location}: {first.message}")
+    return observation
