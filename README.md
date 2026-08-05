@@ -10,7 +10,7 @@
 Browser
   ├─ Cognito (로그인/JWT)
   ├─ S3 (presigned URL 이미지 업로드)
-  └─ Frontend (Next.js 정적 사이트)
+  └─ Amplify Hosting (Next.js SSR)
        └─ API Gateway → Backend API (FastAPI Lambda)
                           └─ SQS → Backend Worker → DynamoDB
                                    └─ VLM (후속 연결)
@@ -35,7 +35,7 @@ Browser
 
 ## 로컬 실행
 
-요구 사항: Node.js 20+, Python 3.11/3.12, npm, 실제 분석용 OpenAI API 키.
+요구 사항: Node.js 22.13+, Python 3.11/3.12, npm, 실제 분석용 OpenAI API 키.
 
 ```powershell
 Copy-Item .env.example .env
@@ -69,16 +69,16 @@ npm --prefix frontend run build
 
 ## AWS 배포 기준
 
-Backend 권장 배포는 서울 리전(`ap-northeast-2`)의 API Gateway HTTP API, Cognito, Lambda, S3, SQS, DynamoDB 조합입니다. 기존 Lambda Function URL은 통합 전환 전까지 레거시 경로로 유지합니다.
+Frontend는 Amplify Hosting, Backend는 서울 리전(`ap-northeast-2`)의 API Gateway HTTP API, Cognito, Lambda, S3, SQS, DynamoDB 조합으로 배포합니다. 공개 Lambda Function URL은 사용하지 않습니다.
 
 1. Frontend 담당자가 정확한 운영 origin을 전달
 2. `infra/build-backend-lambda.ps1`로 Backend Linux Lambda ZIP 생성
-3. `infra/backend-secure.yaml`을 기존 스택과 별도로 배포
+3. `infra/backend-secure.yaml`로 API Gateway/Lambda 스택 배포
 4. 출력된 API/Cognito 설정을 Frontend 담당자에게 전달
 5. Cognito 로그인 → S3 PUT → 분석 생성 → 결과 polling 스모크 테스트
-6. 통합 검증 후에만 기존 Function URL 전환·정리를 별도 결정
+6. 기존 Function URL이 이미 있다면 통합 검증 후 별도 승인으로 정리
 
-이미지는 presigned URL로 S3에 직접 업로드하며 기본 상한은 10MiB입니다. Frontend와 VLM의 배포 방식은 각 역할 담당자가 결정하며, Backend 세부 절차는 `infra/README.md`와 `docs/backend.md`에서 관리합니다.
+이미지는 presigned URL로 S3에 직접 업로드하며 기본 상한은 10MiB입니다. Frontend 빌드는 저장소 루트의 `amplify.yml`, Backend 배포는 `infra/backend-secure.yaml`을 사용합니다. 세부 절차는 `docs/frontend.md`, `infra/README.md`, `docs/backend.md`에서 관리합니다.
 
 ## 문서
 

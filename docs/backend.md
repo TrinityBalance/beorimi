@@ -24,7 +24,7 @@ API Gateway가 Cognito JWT를 검증하고, Backend는 전달된 `sub`를 사용
 
 실제 VLM 호출은 API Gateway의 최대 통합 시간보다 길 수 있으므로 worker에서 비동기로 실행합니다. Worker는 S3 객체를 재검증한 뒤 서비스 토큰으로 VLM을 호출하고 관찰 결과를 DynamoDB에 저장합니다.
 
-기존 `POST /api/analysis` 동기식 경로는 로컬/이전 Function URL 호환용입니다. 새 HTTP API Gateway에는 노출하지 않습니다.
+기존 `POST /api/analysis` 동기식 경로는 로컬 호환용입니다. 운영 HTTP API Gateway에는 노출하지 않습니다.
 
 ## 계층별 작업 원칙
 
@@ -51,7 +51,7 @@ Routes는 HTTP 처리, Services는 업무 흐름, Repositories는 저장소 접�
 | POST | `/api/uploads` | Cognito JWT | 크기 제한이 적용된 사용자 전용 S3 POST form 생성 |
 | POST | `/api/analyses` | Cognito JWT | 업로드 확인 후 분석 작업 생성(202) |
 | GET | `/api/analyses/{id}` | Cognito JWT | 본인 작업 상태와 결과 조회 |
-| POST | `/api/analysis` | 레거시 | 동기 VLM 호출, 새 Gateway 미노출 |
+| POST | `/api/analysis` | 로컬 전용 | 동기 VLM 호출, 운영 Gateway 미노출 |
 
 전체 요청·응답은 `shared/api/openapi.yaml`과 `shared/schemas/**`가 원본입니다. 존재하지 않는 작업과 다른 사용자의 작업은 모두 404로 반환해 소유 여부를 노출하지 않습니다.
 
@@ -119,12 +119,11 @@ python -m pytest backend/tests
 
 ## AWS 배포
 
-- 레거시: `infra/backend-lambda.yaml` — 기존 공개 Function URL 유지용
-- 권장: `infra/backend-secure.yaml` — Cognito, S3, DynamoDB, SQS, API/worker Lambda, HTTP API
+- 배포 템플릿: `infra/backend-secure.yaml` — Cognito, S3, DynamoDB, SQS, API/worker Lambda, HTTP API
 - 패키징: `infra/build-backend-lambda.ps1`
-- 병렬 배포: `infra/deploy-backend-secure.ps1`
+- 배포: `infra/deploy-backend-secure.ps1`
 
-권장 스택은 데이터 리소스에 `Retain`을 설정합니다. 기존 스택을 제거하거나 트래픽을 전환하지 않고 먼저 별도 이름으로 배포한 뒤, Frontend 담당자의 통합 검증 후 전환합니다. Root 계정 대신 배포 전용 IAM 역할을 사용하고 예산 알림을 설정합니다.
+스택은 데이터 리소스에 `Retain`을 설정합니다. 기존 배포가 있으면 별도 이름으로 먼저 배포한 뒤 Frontend 통합 검증 후 트래픽을 전환합니다. Root 계정 대신 배포 전용 IAM 역할을 사용하고 예산 알림을 설정합니다.
 
 ## 다음 Backend 작업
 

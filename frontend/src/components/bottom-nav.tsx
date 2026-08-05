@@ -12,7 +12,9 @@ const navigation = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const hidden = pathname.startsWith("/analyze");
+  const hidden = ["/analyze", "/result", "/report"].some((route) =>
+    pathname.startsWith(route),
+  );
 
   if (hidden) return null;
 

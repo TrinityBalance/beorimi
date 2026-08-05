@@ -33,7 +33,7 @@ export default function HistoryPage() {
       />
 
       <section className="history-intro">
-        <span className="section-kicker">MY HISTORY</span>
+        <span className="section-kicker">나의 판별 기록</span>
         <h1>내가 확인한<br />폐기물이에요</h1>
         <p>최근 6개의 판별 결과를 이 기기에만 보관해요.</p>
       </section>

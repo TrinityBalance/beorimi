@@ -320,13 +320,15 @@ export default function ResultPage() {
       </a>
 
       <div className="result-actions">
-        <Link className="primary-button" href={`/report/${result.id}`}>
-          강남구에 배출 신고하기 <span aria-hidden="true">↗</span>
-        </Link>
         <button className="secondary-button" type="button" onClick={() => void copyItemName()}>
           <span className="copy-glyph" aria-hidden="true" />
           {copied ? "품목명을 복사했어요" : "판독한 품목명 복사"}
         </button>
+      </div>
+      <div className="detail-primary-tray">
+        <Link className="primary-button" href={`/report/${result.id}`}>
+          강남구에 배출 신고하기 <span aria-hidden="true">↗</span>
+        </Link>
       </div>
     </main>
   );

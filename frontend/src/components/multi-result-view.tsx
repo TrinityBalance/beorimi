@@ -49,6 +49,10 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
   const filteredCatalog = catalog.filter((item) =>
     item.name.toLocaleLowerCase("ko-KR").includes(normalizedQuery),
   );
+  const editingItemIndex = editingItem
+    ? result.items.findIndex((item) => item.id === editingItem.id)
+    : -1;
+  const editingItemColor = itemColors[Math.max(0, editingItemIndex) % itemColors.length];
 
   useEffect(() => {
     if (editingItemId === null) return;
@@ -163,7 +167,7 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
       />
 
       <section className="multi-result-hero">
-        <span className="eyebrow">MULTI ITEM ANALYSIS</span>
+        <span className="eyebrow">여러 품목 판별</span>
         <h1>
           사진에서 <em>{result.items.length}개</em>의<br />
           물건을 찾았어요
@@ -188,7 +192,7 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
               <button
                 type="button"
                 className={`detection-box ${item.selected ? "is-selected" : "is-excluded"}`}
-                style={getBoxStyle(item.bbox, itemColors[index % itemColors.length])}
+                style={getBoxStyle(item.bbox, itemColors[index % itemColors.length], index)}
                 onClick={() => toggleItem(item.id)}
                 aria-label={`${item.label} ${item.selected ? "선택 해제" : "선택"}`}
                 key={item.id}
@@ -234,6 +238,10 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
             return (
               <article
                 className={`multi-item-card ${item.selected ? "is-selected" : "is-excluded"}`}
+                style={{
+                  "--item-color": itemColors[index % itemColors.length],
+                  "--item-order": index,
+                } as CSSProperties}
                 key={item.id}
               >
                 <button
@@ -298,8 +306,39 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
 
       {estimatedTotal !== null ? (
         <section className="multi-fee-summary">
-          <div>
-            <span>{result.demo ? "선택 품목 데모 예상 수수료" : "선택 품목 예상 수수료"}</span>
+          <header>
+            <div>
+              <span>{result.demo ? "데모 예상 수수료 영수증" : "예상 수수료 영수증"}</span>
+              <small>선택한 {selectedItems.length}개 품목</small>
+            </div>
+            <em>강남구</em>
+          </header>
+          <ul>
+            {selectedItems.map((item) => {
+              const originalIndex = result.items.findIndex((candidate) => candidate.id === item.id);
+              const quantity = Math.max(1, item.quantity ?? 1);
+
+              return (
+                <li
+                  style={{
+                    "--item-color": itemColors[Math.max(0, originalIndex) % itemColors.length],
+                  } as CSSProperties}
+                  key={item.id}
+                >
+                  <span>
+                    <i aria-hidden="true" />
+                    <span>
+                      <strong>{item.label}</strong>
+                      <small>{[item.size, quantity > 1 ? `${quantity}개` : "1개"].filter(Boolean).join(" · ")}</small>
+                    </span>
+                  </span>
+                  <strong>{getItemEstimatedFee(item).toLocaleString("ko-KR")}원</strong>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="multi-fee-summary__total">
+            <span>예상 합계</span>
             <strong>{estimatedTotal.toLocaleString("ko-KR")}<small>원</small></strong>
           </div>
           <p>데모 금액은 화면 테스트용이며, 최종 수수료는 공식 신고 단계에서 품목과 규격을 확인한 뒤 확정됩니다.</p>
@@ -314,21 +353,7 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
         </section>
       )}
 
-      <div className="multi-selection-summary">
-        <span>신고 준비 품목</span>
-        <strong>{selectedItems.length}<small>개</small></strong>
-      </div>
-
       <div className="result-actions">
-        {selectedItems.length > 0 ? (
-          <Link className="primary-button" href={`/report/${result.id}`}>
-            선택한 {selectedItems.length}개 품목 신고 준비 <span aria-hidden="true">→</span>
-          </Link>
-        ) : (
-          <button className="primary-button" type="button" disabled>
-            신고할 품목을 선택해주세요
-          </button>
-        )}
         <button
           className="secondary-button"
           type="button"
@@ -338,6 +363,18 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
           <span className="copy-glyph" aria-hidden="true" />
           {copied ? "품목 목록을 복사했어요" : "선택한 품목명 복사"}
         </button>
+      </div>
+
+      <div className="detail-primary-tray">
+        {selectedItems.length > 0 ? (
+          <Link className="primary-button" href={`/report/${result.id}`}>
+            선택한 {selectedItems.length}개 품목 신고 준비 <span aria-hidden="true">→</span>
+          </Link>
+        ) : (
+          <button className="primary-button" type="button" disabled>
+            신고할 품목을 선택해주세요
+          </button>
+        )}
       </div>
 
       {editingItem && (
@@ -357,7 +394,15 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
             <div className="correction-sheet__handle" aria-hidden="true" />
             <header className="correction-sheet__header">
               <div>
-                <span>사용자 확인</span>
+                <div className="correction-sheet__kicker">
+                  <span
+                    className="correction-item-sticker"
+                    style={{ "--item-color": editingItemColor } as CSSProperties}
+                  >
+                    사진 속 {editingItemIndex + 1}번
+                  </span>
+                  <span>사용자 확인</span>
+                </div>
                 <h2 id="correction-sheet-title">품목과 규격 수정</h2>
               </div>
               <button type="button" onClick={() => setEditingItemId(null)} aria-label="닫기">×</button>
@@ -397,6 +442,9 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
                     ))}
                     {filteredCatalog.length === 0 && <p>검색 결과가 없어요. 아래에 직접 입력해주세요.</p>}
                   </div>
+                  {filteredCatalog.length > 3 && (
+                    <p className="correction-catalog-hint" aria-hidden="true">옆으로 밀어 더 보기 →</p>
+                  )}
                 </div>
               )}
 
@@ -513,10 +561,11 @@ function toPercent(confidence: number) {
   return Math.round(Math.max(0, Math.min(1, confidence)) * 100);
 }
 
-function getBoxStyle(bbox: BoundingBox, color: string): CSSProperties {
+function getBoxStyle(bbox: BoundingBox, color: string, index: number): CSSProperties {
   const [left, top, right, bottom] = bbox;
   return {
     "--box-color": color,
+    "--item-order": index,
     left: `${left / 10}%`,
     top: `${top / 10}%`,
     width: `${Math.max(0, right - left) / 10}%`,

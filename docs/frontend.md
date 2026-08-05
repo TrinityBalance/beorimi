@@ -17,7 +17,7 @@ Frontend는 VLM을 직접 호출하거나 수수료·배출 가능 여부를 자
 
 ## 현재 상태
 
-- Next.js 16.3 App Router, React 19.2, TypeScript
+- Next.js 15.5 App Router, React 19.2, TypeScript
 - Tailwind CSS 4
 - `src/app/page.tsx`는 Create Next App 기본 화면
 - `src/lib/api.ts`에 Backend 기본 주소와 공통 JSON 요청 함수만 존재
@@ -139,12 +139,17 @@ UI 기능을 구현할 때 추가로 확인할 항목:
 Frontend는 저장소 루트의 `amplify.yml`을 사용해 AWS Amplify에 배포하는 구성이 준비되어 있습니다.
 
 - 모노레포 앱 루트: `frontend`
+- Amplify 콘솔 환경 변수 `AMPLIFY_MONOREPO_APP_ROOT=frontend`
 - 설치: `npm ci`
 - 빌드: `npm run build`
 - 산출물: `.next`
 - Amplify 환경 변수에 `NEXT_PUBLIC_API_BASE_URL` 등록 필요
+- SSR Route Handler용 `BACKEND_API_BASE_URL` 등록 권장
+- 보안 비동기 API 연결 전까지 `ANALYSIS_DEMO_MODE=true` 등록
 
-`NEXT_PUBLIC_API_BASE_URL`은 빌드 시 번들에 들어가므로 Backend App Runner 주소를 배포 전에 설정하고 다시 빌드해야 합니다. 배포 후 해당 Amplify 도메인을 Backend의 `CORS_ALLOW_ORIGINS`에도 추가합니다.
+`NEXT_PUBLIC_API_BASE_URL`과 `BACKEND_API_BASE_URL`에는 API Gateway HTTP API의 `ApiUrl` 출력을 등록합니다. 공개 설정은 `amplify.yml`이 `.env.production`에 기록해 Next.js SSR 런타임에도 전달합니다. 비밀값은 Amplify 환경 변수나 `.env.production`에 넣지 않습니다. 배포 후 해당 Amplify 도메인을 CloudFormation의 `FrontendOrigin`에 정확한 origin으로 전달해 CORS를 제한합니다.
+
+현재 `/api/analyze` Route Handler는 UI 데모와 로컬 동기 API 호환용입니다. Cognito 로그인 → S3 직접 업로드 → `/api/analyses` polling 흐름이 연결되기 전에는 Amplify에서 `ANALYSIS_DEMO_MODE=true`를 유지합니다. 이 값만 `false`로 바꾸면 운영 API Gateway에 노출하지 않은 동기 `/api/analysis`를 호출하므로 실제 전환으로 간주하지 않습니다.
 
 ## 다음 작업
 
