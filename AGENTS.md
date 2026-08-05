@@ -23,12 +23,12 @@ Run all lookup and verification commands from the repository root.
 ## Shared invariants
 
 - Frontend calls Backend only. VLM returns image observations only. Backend owns the public API and final disposal decisions.
-- The production hosting path is AWS-only: Amplify hosts Frontend, API Gateway exposes the public API, and Lambda runs Backend workloads. Do not add Cloudflare Workers, Pages, D1, R2, Wrangler, or another parallel hosting runtime without an explicit cross-role architecture decision.
+- The production hosting path is Vercel + Supabase: Vercel hosts the Next.js app and public API routes; Supabase owns Auth, Storage, Postgres, pg_net jobs, and Edge Functions. Do not add another hosting runtime without an explicit cross-role architecture decision.
 - `shared/api/openapi.yaml`, `shared/schemas/**`, and `shared/docs/api-contract.md` are the contract source of truth.
 - Contract changes proceed in this order: shared contract → providing service → consuming service.
 - Analysis is asynchronous. `POST /api/analyses` only enqueues and returns `202` with status `queued`; results arrive through polling `GET /api/analyses/{id}`. Do not add a synchronous analysis path to the public API.
-- `infra/**` belongs to Backend. Values in `infra/backend-secure.yaml` and `backend/app/core/config.py` are paired — image key prefixes, SQS `maxReceiveCount`, and DynamoDB TTL field names must change together.
-- Protected routes return `401` under a local `uvicorn` run because JWT claims come from the API Gateway authorizer. Verify them against a deployment, not locally.
+- `supabase/**` belongs to Backend. Database migrations, Edge Function secrets, worker payloads, and `frontend/src/lib/server/supabase.ts` must change together.
+- Protected routes validate Supabase JWTs. Verify the full authenticated flow against a Supabase deployment, not a mocked token.
 - Cross-role edits require every affected role card and its verification, but not every detailed guide in full.
 - Keep role details in `docs/<role>.md`; change the root README only for project-wide workflow or architecture changes.
 - Preserve unrelated edits and never put secrets or personal data in code, docs, or the cowork board.

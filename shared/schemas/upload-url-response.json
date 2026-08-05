@@ -4,14 +4,9 @@
   "title": "UploadUrlResponse",
   "type": "object",
   "additionalProperties": false,
-  "required": ["upload_url", "image_key", "expires_in", "form_fields"],
+  "required": ["image_key", "upload_token"],
   "properties": {
-    "upload_url": { "type": "string", "format": "uri" },
     "image_key": { "type": "string" },
-    "expires_in": { "type": "integer", "minimum": 1 },
-    "form_fields": {
-      "type": "object",
-      "additionalProperties": { "type": "string" }
-    }
+    "upload_token": { "type": "string", "minLength": 1 }
   }
 }

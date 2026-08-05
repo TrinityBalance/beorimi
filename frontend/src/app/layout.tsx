@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { BottomNav } from "@/components/bottom-nav";
-import { ConfigureAmplify } from "@/components/configure-amplify";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import "./globals.css";
 
@@ -61,7 +60,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="ko">
       <body>
         <div className="app-frame">
-          <ConfigureAmplify />
           {children}
           <BottomNav />
         </div>

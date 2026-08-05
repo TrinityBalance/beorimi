@@ -43,6 +43,8 @@ export type BackendAnalysisItem = {
   needs_user_confirmation: boolean;
   confirm_question: string | null;
   bbox: BoundingBox | null;
+  estimated_fee?: number | null;
+  fee_size_label?: string | null;
 };
 
 export type BackendAnalysisResponse = {
@@ -52,10 +54,8 @@ export type BackendAnalysisResponse = {
 };
 
 export type UploadUrlResponse = {
-  upload_url: string;
   image_key: string;
-  expires_in: number;
-  form_fields: Record<string, string>;
+  upload_token: string;
 };
 
 export type AnalysisJobStatus =

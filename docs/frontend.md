@@ -1,95 +1,24 @@
 # Frontend 작업 가이드
 
-Next.js App Router 기반 모바일 웹/PWA입니다. Frontend는 Backend API만 호출하며 VLM이나 수수료 규칙을 직접 판단하지 않습니다.
+## 현재 구조
 
-## 현재 구현
-
-- Cognito 이메일 가입, 확인 코드, 로그인, 임시 비밀번호 변경
-- 카메라·앨범 선택, 이미지 미리보기, 선택 영역 자르기
-- presigned S3 POST, 비동기 분석 생성·polling, 5회 한도 안내
-- 다중 품목 선택·수정 UI와 확인 질문 표시
-- 최근 결과 최대 6개를 `localStorage`에 저장
-- 홈, 촬영, 분석, 결과, 신고 확인, 기록, 도움말 화면
-- manifest, 동적 아이콘, service worker 등록
-
-수수료 선택지는 현재 `src/lib/demo-waste-catalog.ts`의 데모 값입니다. Backend 규정 데이터가 연결되기 전에는 공식 금액으로 표현하지 않습니다.
-
-## 구조
-
-```text
-frontend/
-├─ public/                 # PWA·OG 정적 자산
-├─ src/app/                # App Router 화면
-├─ src/components/         # 재사용 UI
-├─ src/lib/
-│  ├─ api.ts               # Backend 요청·S3 업로드·polling
-│  ├─ analysis-contract.ts # 런타임 응답 검증
-│  ├─ auth.ts              # Amplify Cognito 인증
-│  ├─ analysis-store.ts    # session/local storage
-│  └─ image.ts             # 이미지 변환·자르기
-└─ src/types/
-   ├─ api.ts               # shared 계약 대응 타입
-   └─ analysis.ts          # 화면·데모 결과 타입
-```
-
-페이지는 화면 조립을 맡고, 네트워크·인증·저장·이미지 처리는 `src/lib`에 둡니다. 실제 재사용이 없는 코드는 별도 feature 계층을 만들지 않습니다.
-
-## 분석 흐름
-
-1. Amplify가 발급한 access token을 `Authorization: Bearer`로 보냅니다.
-2. `POST /api/uploads`에서 받은 `form_fields`와 파일을 S3에 POST합니다.
-3. `POST /api/analyses`로 작업을 만들고 `202 queued`를 받습니다.
-4. `GET /api/analyses/{id}`를 terminal 상태까지 polling합니다.
-5. `completed.observation`을 런타임 검증한 뒤 결과 화면에 저장합니다.
-6. `401/403`은 로그인으로, `429`는 계정 한도 안내로, 파일·서비스 오류는 재시도 UI로 전환합니다.
-
-요청·응답은 `shared/api/openapi.yaml`과 `shared/schemas/**`를 따릅니다. S3 요청에는 브라우저가 multipart boundary를 설정하도록 `Content-Type`을 직접 지정하지 않습니다.
+`frontend/`은 Vercel에 배포되는 Next.js App Router 앱임. 브라우저는 동일 origin의 `/api/*`만 호출하고, 사진 파일은 서버가 발급한 Supabase Storage signed-upload token으로 직접 업로드함.
 
 ## 환경 변수
 
 ```dotenv
-NEXT_PUBLIC_API_BASE_URL=https://example.execute-api.ap-northeast-2.amazonaws.com
-NEXT_PUBLIC_COGNITO_USER_POOL_ID=ap-northeast-2_example
-NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID=exampleclientid
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
+NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=waste-images
 ```
 
-`NEXT_PUBLIC_*`는 브라우저 번들에 포함되므로 비밀값을 넣지 않습니다. 값 변경 후에는 다시 빌드해야 합니다.
+`NEXT_PUBLIC_*`에는 공개값만 둠. service role key, OpenAI key, worker secret은 절대 넣지 않음.
 
-## 실행·검증
+## 배포·검증
+
+Vercel Root Directory는 `frontend`임. Build Command는 `npm run build`.
 
 ```powershell
-npm --prefix frontend ci
-npm --prefix frontend run dev
-npm --prefix frontend run lint
-npm --prefix frontend run build
+npm.cmd --prefix frontend run lint
+npm.cmd --prefix frontend run build
 ```
-
-수동 확인 항목:
-
-- 모바일·데스크톱 너비와 키보드 포커스
-- 카메라 권한 거부 시 앨범 업로드 대체 경로
-- 큰 파일·미지원 형식·네트워크 오류
-- 중복 제출 방지와 분석 취소
-- 낮은 신뢰도·빈 결과·복수 품목·5회 소진 화면
-
-## 배포
-
-Frontend는 저장소 루트의 `amplify.yml`을 사용해 AWS Amplify에 배포하는 구성이 준비되어 있습니다.
-
-- 모노레포 앱 루트: `frontend`
-- Amplify 콘솔 환경 변수 `AMPLIFY_MONOREPO_APP_ROOT=frontend`
-- 설치: `npm ci`
-- 빌드: `npm run build`
-- 산출물: `.next`
-- Amplify 환경 변수에 `NEXT_PUBLIC_API_BASE_URL` 등록 필요
-- Amplify 환경 변수에 `NEXT_PUBLIC_COGNITO_USER_POOL_ID` 등록 필요
-- Amplify 환경 변수에 `NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID` 등록 필요
-
-`NEXT_PUBLIC_API_BASE_URL`에는 API Gateway HTTP API의 `ApiUrl` 출력을 등록합니다. `NEXT_PUBLIC_*` 값은 빌드된 브라우저 번들에 포함되므로 비밀값을 넣지 않습니다. 배포 후 Amplify 운영 도메인을 CloudFormation의 `FrontendOrigin`과 Backend CORS에 정확한 origin으로 등록합니다.
-
-## 다음 작업
-
-- Backend 수수료·규정 응답으로 데모 카탈로그 교체
-- 서버 기반 사용자 분석 기록과 로컬 기록 동기화
-- 실제 모바일 브라우저 카메라·PWA 설치 회귀 테스트
-- 접근성 자동화와 Frontend 단위 테스트 추가

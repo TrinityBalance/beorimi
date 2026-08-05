@@ -9,6 +9,7 @@ import {
 } from "@/lib/analysis-store";
 import { BackendApiError, uploadAndStartAnalysis } from "@/lib/api";
 import { AuthRequiredError, getAccessToken } from "@/lib/auth";
+import { DEMO_WASTE_CATALOG } from "@/lib/demo-waste-catalog";
 import { cropPhoto, dataUrlToBlob } from "@/lib/image";
 import type { AnalysisJobStatus, MultiWasteAnalysisResult } from "@/types/analysis";
 
@@ -92,12 +93,14 @@ export default function AnalyzePage() {
           selected: true,
           detectedLabel: item.label,
           quantity: Math.max(1, item.quantity),
-          size: item.longest_side_cm
+          size: item.fee_size_label ?? (item.longest_side_cm
             ? `최장변 약 ${item.longest_side_cm}cm`
-            : undefined,
+            : undefined),
+          estimatedFee: item.estimated_fee ?? undefined,
           userConfirmed: !item.needs_user_confirmation,
         })),
         notes: result.notes,
+        catalog: DEMO_WASTE_CATALOG,
       };
       saveResult(completed);
       router.replace(`/result/${completed.id}`);

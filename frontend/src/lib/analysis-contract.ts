@@ -76,7 +76,13 @@ export function isAnalysisResponse(
                 Number.isInteger(coordinate) &&
                 coordinate >= 0 &&
                 coordinate <= 1000,
-            ))),
+            ))) &&
+        (item.estimated_fee === undefined ||
+          item.estimated_fee === null ||
+          (Number.isInteger(item.estimated_fee) && item.estimated_fee >= 0)) &&
+        (item.fee_size_label === undefined ||
+          item.fee_size_label === null ||
+          typeof item.fee_size_label === "string"),
     ) &&
     typeof result.notes === "string"
   );

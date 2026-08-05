@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: Beorimi API
-  version: 0.3.0
+  version: 0.4.0
 components:
   securitySchemes:
-    cognitoJwt:
+    supabaseJwt:
       type: http
       scheme: bearer
       bearerFormat: JWT
@@ -25,41 +25,11 @@ paths:
                     type: string
                   service:
                     type: string
-  /api/analysis:
-    post:
-      operationId: analyzeWaste
-      deprecated: true
-      description: Legacy synchronous endpoint. It is not exposed by the secure API Gateway.
-      requestBody:
-        required: true
-        content:
-          multipart/form-data:
-            schema:
-              $ref: ../schemas/analysis-request.json
-      responses:
-        "200":
-          description: VLM observation
-          content:
-            application/json:
-              schema:
-                $ref: ../schemas/analysis-response.json
-        "400":
-          description: Empty or invalid image upload
-        "413":
-          description: Image exceeds the configured upload limit
-        "415":
-          description: Unsupported image format
-        "502":
-          description: VLM returned an unusable upstream response
-        "503":
-          description: VLM integration is not configured or unavailable
-        "504":
-          description: VLM request timed out
   /api/uploads:
     post:
       operationId: createUploadUrl
       security:
-        - cognitoJwt: []
+        - supabaseJwt: []
       requestBody:
         required: true
         content:
@@ -68,7 +38,7 @@ paths:
               $ref: ../schemas/upload-url-request.json
       responses:
         "200":
-          description: Short-lived S3 POST form scoped to the authenticated user and upload size limit
+          description: One-time Supabase Storage upload token scoped to the authenticated user and upload size limit
           content:
             application/json:
               schema:
@@ -76,14 +46,14 @@ paths:
         "400":
           description: Invalid filename, media type, or file size
         "401":
-          description: Missing or invalid Cognito token
+          description: Missing or invalid Supabase token
         "503":
           description: Upload storage is not configured
   /api/analyses:
     post:
       operationId: createAnalysis
       security:
-        - cognitoJwt: []
+        - supabaseJwt: []
       requestBody:
         required: true
         content:
@@ -100,18 +70,18 @@ paths:
         "400":
           description: Image key does not belong to the authenticated user
         "401":
-          description: Missing or invalid Cognito token
+          description: Missing or invalid Supabase token
         "404":
           description: Uploaded image does not exist
         "429":
           description: Authenticated account has used all five MVP analyses
         "503":
-          description: Analysis queue is not configured
+          description: Analysis worker is not configured
   /api/analyses/{analysis_id}:
     get:
       operationId: getAnalysis
       security:
-        - cognitoJwt: []
+        - supabaseJwt: []
       parameters:
         - in: path
           name: analysis_id
@@ -127,7 +97,7 @@ paths:
               schema:
                 $ref: ../schemas/analysis-job.json
         "401":
-          description: Missing or invalid Cognito token
+          description: Missing or invalid Supabase token
         "404":
           description: Analysis does not exist or belongs to another user
   /api/waste/{item_name}:

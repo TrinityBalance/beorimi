@@ -3,7 +3,7 @@
 ## Scope and invariants
 
 - Own `vlm/**`, VLM tests, and `docs/vlm.md`.
-- Return image observations only; never decide fees, reporting requirements, or final disposal instructions.
+- Return image observations only; never decide fees, reporting requirements, or final disposal instructions. Production observation work runs in `supabase/functions/analyze`.
 - Keep prompt, strict output schema, shared contract, and Backend consumption compatible.
 - Never put `OPENAI_API_KEY` in source, logs, prompts, or deployment files.
 

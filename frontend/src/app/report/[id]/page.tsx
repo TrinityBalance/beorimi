@@ -97,11 +97,9 @@ export default function ReportPage() {
   const dateReady = date.length > 0;
   const checklistCompleted = [
     itemsConfirmed,
-    addressReady,
-    dateReady,
     officialCheckConfirmed,
   ].filter(Boolean).length;
-  const isReportReady = checklistCompleted === 4;
+  const isReportReady = checklistCompleted === 2;
 
   return (
     <main className="page report-page">
@@ -170,7 +168,7 @@ export default function ReportPage() {
             <span className="section-number">01</span>
             <h2 id="report-form-title">배출 정보 메모</h2>
           </div>
-          <span className="required-chip">필수 입력</span>
+          <span className="required-chip">선택 입력</span>
         </div>
 
         <label>
@@ -228,7 +226,7 @@ export default function ReportPage() {
             <h2 id="report-checklist-title">신고 전 최종 확인</h2>
           </div>
           <span className={`checklist-count ${isReportReady ? "is-complete" : ""}`} aria-live="polite">
-            {checklistCompleted}/4 완료
+            {checklistCompleted}/2 완료
           </span>
         </div>
         <p className="section-description">빠뜨리기 쉬운 내용을 확인하면 공식 신고 페이지로 이동할 수 있어요.</p>
@@ -287,7 +285,7 @@ export default function ReportPage() {
         </div>
 
         <div className="checklist-progress" aria-hidden="true">
-          <span style={{ width: `${checklistCompleted * 25}%` }} />
+          <span style={{ width: `${checklistCompleted * 50}%` }} />
         </div>
 
         {isReportReady && (
@@ -362,7 +360,7 @@ export default function ReportPage() {
           </a>
         ) : (
           <button className="primary-button" type="button" disabled>
-            필수 확인 {4 - checklistCompleted}개 남았어요
+            확인 {2 - checklistCompleted}개 남았어요
           </button>
         )}
       </div>

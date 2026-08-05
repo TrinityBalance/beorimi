@@ -85,6 +85,15 @@
             "items": { "type": "integer", "minimum": 0, "maximum": 1000 },
             "minItems": 4,
             "maxItems": 4
+          },
+          "estimated_fee": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "Backend catalog-based estimated collection fee; the VLM never sets this value."
+          },
+          "fee_size_label": {
+            "type": ["string", "null"],
+            "description": "Catalog size category used for the fee estimate."
           }
         }
       }
