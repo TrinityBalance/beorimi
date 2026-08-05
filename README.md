@@ -61,7 +61,7 @@ Browser / Amplify
 
 ## 로컬 준비
 
-요구 사항은 Node.js 22.13 이상, Python 3.11/3.12, npm입니다.
+요구 사항은 Node.js 22.13 이상, Python 3.11/3.12, npm입니다. 실제 VLM 분석에는 OpenAI API 키가 추가로 필요합니다.
 
 ```powershell
 Copy-Item .env.example .env
@@ -105,8 +105,18 @@ npm --prefix frontend run build
 - `OPENAI_API_KEY`: Secrets Manager 또는 SSM에서 App Runner의 `OPENAI_API_KEY`로만 주입
 - `VLM_SERVICE_TOKEN`: 별도 secret을 Backend worker와 VLM 양쪽에 주입
 - `NEXT_PUBLIC_*`: 공개 설정만 허용하며 API 키나 서비스 토큰을 넣지 않음
+- 공개 Lambda Function URL은 사용하지 않음
 
-Backend 패키징·배포는 `infra/README.md`, VLM 배포는 `docs/vlm.md`, Frontend 환경 설정은 `docs/frontend.md`를 따릅니다.
+배포 순서:
+
+1. Frontend 담당자가 정확한 운영 origin을 전달
+2. `infra/build-backend-lambda.ps1`로 Backend Linux Lambda ZIP 생성
+3. `infra/backend-secure.yaml`로 API Gateway/Lambda 스택 배포
+4. 출력된 API/Cognito 설정을 Frontend 담당자에게 전달
+5. Cognito 로그인 → S3 PUT → 분석 생성 → 결과 polling 스모크 테스트
+6. 기존 Function URL이 이미 있다면 통합 검증 후 별도 승인으로 정리
+
+이미지는 presigned URL로 S3에 직접 업로드하며 기본 상한은 10MiB입니다. Frontend 빌드는 저장소 루트의 `amplify.yml`, Backend 배포는 `infra/backend-secure.yaml`을 사용합니다. 세부 절차는 `docs/frontend.md`, `infra/README.md`, `docs/backend.md`에서 관리합니다.
 
 ## 문서 지도
 

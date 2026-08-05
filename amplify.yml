@@ -7,11 +7,15 @@ applications:
       phases:
         preBuild:
           commands:
+            - nvm use 22
             - npm ci
+            - test -n "$NEXT_PUBLIC_API_BASE_URL"
+            - test -n "$NEXT_PUBLIC_COGNITO_USER_POOL_ID"
+            - test -n "$NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID"
         build:
           commands:
-            # NEXT_PUBLIC_* 는 빌드 시점에 번들에 박히므로
-            # Amplify 콘솔의 환경 변수에 NEXT_PUBLIC_API_BASE_URL 을 반드시 등록해야 한다.
+            # NEXT_PUBLIC_* 는 빌드 시점에 번들에 포함되므로
+            # API Gateway와 Cognito의 공개 설정을 Amplify 환경 변수에 등록해야 한다.
             - npm run build
       artifacts:
         baseDirectory: .next

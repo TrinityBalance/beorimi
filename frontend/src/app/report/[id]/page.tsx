@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { getResult } from "@/lib/analysis-store";
@@ -15,6 +16,7 @@ import type { WasteAnalysisResult } from "@/types/analysis";
 
 const OFFICIAL_REPORT_URL =
   "https://clean.gangnam.go.kr/use/biwa/USEBIWA02030000.do";
+const reportItemColors = ["#dfff3f", "#ff9f6e", "#71d7ff", "#d7a8ff", "#ffd86b"];
 
 export default function ReportPage() {
   const params = useParams<{ id: string }>();
@@ -106,7 +108,7 @@ export default function ReportPage() {
       <PageHeader title="배출 신고 준비" backHref={`/result/${result.id}`} />
 
       <section className="report-hero">
-        <span className="step-chip">LAST STEP</span>
+        <span className="step-chip">신고 전 마지막 단계</span>
         <h1>
           {isMulti ? `${selectedItems.length}개 품목 신고를` : "신고할 정보를"}<br />
           미리 준비해둘게요
@@ -117,7 +119,13 @@ export default function ReportPage() {
       {isMulti ? (
         <section className="report-multi-list" aria-label="신고 준비 품목">
           {selectedItems.map((item, index) => (
-            <article key={item.id}>
+            <article
+              style={{
+                "--item-color": reportItemColors[index % reportItemColors.length],
+                "--item-order": index,
+              } as CSSProperties}
+              key={item.id}
+            >
               <span>{index + 1}</span>
               <div>
                 <small>{item.userConfirmed ? "사용자 확인 품목" : "판독한 품목"}</small>
@@ -166,7 +174,12 @@ export default function ReportPage() {
         </div>
 
         <label>
-          <span>배출 주소</span>
+          <span className="report-field-label">
+            <span>배출 주소</span>
+            <em className={addressReady ? "is-complete" : ""}>
+              {addressReady ? "✓ 입력 완료" : "입력하면 자동 확인"}
+            </em>
+          </span>
           <div className="input-shell">
             <span className="pin-dot" aria-hidden="true" />
             <input
@@ -181,7 +194,12 @@ export default function ReportPage() {
         </label>
 
         <label>
-          <span>배출 예정일</span>
+          <span className="report-field-label">
+            <span>배출 예정일</span>
+            <em className={dateReady ? "is-complete" : ""}>
+              {dateReady ? "✓ 선택 완료" : "선택하면 자동 확인"}
+            </em>
+          </span>
           <div className="input-shell">
             <span className="calendar-glyph" aria-hidden="true" />
             <input
@@ -200,7 +218,10 @@ export default function ReportPage() {
         </p>
       </section>
 
-      <section className="report-checklist" aria-labelledby="report-checklist-title">
+      <section
+        className={`report-checklist ${isReportReady ? "is-complete" : ""}`}
+        aria-labelledby="report-checklist-title"
+      >
         <div className="result-section__heading">
           <div>
             <span className="section-number">02</span>
@@ -211,6 +232,27 @@ export default function ReportPage() {
           </span>
         </div>
         <p className="section-description">빠뜨리기 쉬운 내용을 확인하면 공식 신고 페이지로 이동할 수 있어요.</p>
+
+        <div className="checklist-auto-status" aria-label="자동 확인 항목">
+          <button
+            className={addressReady ? "is-complete" : ""}
+            type="button"
+            onClick={() => document.querySelector<HTMLInputElement>("#report-address")?.focus()}
+          >
+            <span aria-hidden="true">{addressReady ? "✓" : "1"}</span>
+            <strong>주소</strong>
+            <small>{addressReady ? "입력 완료" : "입력 필요"}</small>
+          </button>
+          <button
+            className={dateReady ? "is-complete" : ""}
+            type="button"
+            onClick={() => document.querySelector<HTMLInputElement>("#report-date")?.focus()}
+          >
+            <span aria-hidden="true">{dateReady ? "✓" : "2"}</span>
+            <strong>예정일</strong>
+            <small>{dateReady ? formatKoreanDate(date) : "선택 필요"}</small>
+          </button>
+        </div>
 
         <div className="report-checklist__items">
           <label className={itemsConfirmed ? "is-complete" : ""}>
@@ -230,32 +272,6 @@ export default function ReportPage() {
             </span>
           </label>
 
-          <button
-            className={addressReady ? "is-complete" : ""}
-            type="button"
-            onClick={() => document.querySelector<HTMLInputElement>("#report-address")?.focus()}
-          >
-            <span className="checklist-box" aria-hidden="true">{addressReady ? "✓" : ""}</span>
-            <span>
-              <strong>배출 주소</strong>
-              <small>{addressReady ? address : "주소를 입력하면 자동으로 완료돼요"}</small>
-            </span>
-            {!addressReady && <em>입력</em>}
-          </button>
-
-          <button
-            className={dateReady ? "is-complete" : ""}
-            type="button"
-            onClick={() => document.querySelector<HTMLInputElement>("#report-date")?.focus()}
-          >
-            <span className="checklist-box" aria-hidden="true">{dateReady ? "✓" : ""}</span>
-            <span>
-              <strong>배출 예정일</strong>
-              <small>{dateReady ? formatKoreanDate(date) : "예정일을 선택하면 자동으로 완료돼요"}</small>
-            </span>
-            {!dateReady && <em>선택</em>}
-          </button>
-
           <label className={officialCheckConfirmed ? "is-complete" : ""}>
             <input
               type="checkbox"
@@ -273,15 +289,31 @@ export default function ReportPage() {
         <div className="checklist-progress" aria-hidden="true">
           <span style={{ width: `${checklistCompleted * 25}%` }} />
         </div>
+
+        {isReportReady && (
+          <div className="checklist-complete-banner" role="status">
+            <span aria-hidden="true">✓</span>
+            <p>
+              <strong>신고 준비 완료!</strong>
+              빠진 내용 없이 모두 확인했어요. 이제 공식 신고 페이지로 이동하면 돼요.
+            </p>
+            <i aria-hidden="true">✦</i>
+          </div>
+        )}
       </section>
 
-      <section className="before-report">
-        <div className="result-section__heading">
+      <details className="before-report">
+        <summary className="result-section__heading">
           <div>
             <span className="section-number">03</span>
             <h2>공식 사이트에서 할 일</h2>
           </div>
-        </div>
+          <span className="before-report__toggle">
+            <span className="before-report__closed">펼쳐보기</span>
+            <span className="before-report__open">접기</span>
+            <span className="before-report__arrow" aria-hidden="true">⌄</span>
+          </span>
+        </summary>
         <ol>
           <li>
             <span>1</span>
@@ -302,7 +334,7 @@ export default function ReportPage() {
             <p>결제 후 접수번호와 연락처를 폐기물에 적어 붙여요.</p>
           </li>
         </ol>
-      </section>
+      </details>
 
       <aside className="official-notice">
         <span className="official-notice__mark" aria-hidden="true">G</span>
@@ -317,6 +349,8 @@ export default function ReportPage() {
           <span className="copy-glyph" aria-hidden="true" />
           {copied ? "신고 정보를 복사했어요" : "신고 정보 복사하기"}
         </button>
+      </div>
+      <div className={`detail-primary-tray ${isReportReady ? "is-ready" : ""}`}>
         {isReportReady ? (
           <a
             className="primary-button"

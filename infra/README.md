@@ -16,7 +16,7 @@ Backend 담당자가 소유하는 AWS 리소스와 배포 절차입니다. Front
 - Cognito JWT authorizer가 적용된 API Gateway HTTP API
 - 리소스별 최소 권한 IAM role과 14일 로그 보존
 
-기존 `backend-lambda.yaml` Function URL은 이전 통합을 깨지 않기 위한 레거시 스택입니다. 새 보안 스택은 별도 이름으로 병렬 배포합니다.
+공개 진입점은 API Gateway HTTP API만 사용합니다. Lambda Function URL 템플릿은 더 이상 제공하지 않습니다.
 
 ## 사전 조건
 
@@ -39,7 +39,7 @@ python -m pytest backend/tests
 
 생성 ZIP은 Git에서 제외된 `.aws-build/backend.zip`입니다.
 
-## 병렬 배포
+## 배포
 
 ```powershell
 .\infra\deploy-backend-secure.ps1 `
@@ -67,4 +67,4 @@ Frontend 연결 전에는 API Lambda에 JWT claims 형태의 테스트 이벤트
 .\infra\smoke-backend-secure.ps1 -Profile beorimi-sso
 ```
 
-Frontend 전환 전까지 기존 `beorimi-runtime`과 공개 Function URL은 유지합니다. 이 URL의 `/api/analysis`는 인증 없이 VLM 비용을 발생시킬 수 있으므로 운영 트래픽 전환 직후 제거해야 합니다. 삭제나 교체는 통합 검증과 사용자 승인 후 별도 작업으로 수행합니다.
+기존 AWS 계정에 공개 Lambda Function URL이 이미 배포되어 있다면 이 저장소 변경만으로 삭제되지는 않습니다. Amplify와 API Gateway 통합 검증 후, 해당 스택의 영향 범위를 확인하고 별도 승인 절차로 폐기합니다.

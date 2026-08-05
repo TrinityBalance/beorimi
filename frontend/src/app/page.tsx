@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PhotoPicker } from "@/components/photo-picker";
 import { getHistory } from "@/lib/analysis-store";
-import { getResultSummary } from "@/lib/result";
+import { getResultSummary, isMultiResult } from "@/lib/result";
 import type { WasteAnalysisResult } from "@/types/analysis";
 
 export default function Home() {
@@ -18,6 +18,7 @@ export default function Home() {
   }, []);
 
   const recentSummary = recent ? getResultSummary(recent) : null;
+  const recentCount = recent && isMultiResult(recent) ? recent.items.length : recent ? 1 : 0;
 
   return (
     <main className="page home-page">
@@ -35,9 +36,9 @@ export default function Home() {
       </header>
 
       <section className="home-hero" aria-labelledby="home-title">
-        <span className="eyebrow">대형폐기물 AI 안내</span>
+        <span className="eyebrow"><span aria-hidden="true" /> 대형폐기물 AI 안내</span>
         <h1 id="home-title">
-          이거 어떻게
+          이거 <em>어떻게</em>
           <br />
           버려야 할까요?
         </h1>
@@ -47,20 +48,35 @@ export default function Home() {
           신고할 목록으로 정리해드려요.
         </p>
 
+        <span className="home-feature-badge">
+          <span aria-hidden="true">✓</span> 여러 물건도 한 번에 판별
+        </span>
+
         <div className="hero-camera-wrap">
-          <span className="orbit orbit--one" aria-hidden="true" />
-          <span className="orbit orbit--two" aria-hidden="true" />
+          <span className="home-viewfinder" aria-hidden="true" />
+          <span className="home-scan-line" aria-hidden="true" />
+          <span className="home-detection-sticker home-detection-sticker--one" aria-hidden="true">
+            <span>01</span><strong>의자</strong>
+          </span>
+          <span className="home-detection-sticker home-detection-sticker--two" aria-hidden="true">
+            <span>02</span><strong>소파</strong>
+          </span>
+          <span className="home-detection-sticker home-detection-sticker--three" aria-hidden="true">
+            <span>03</span><strong>수납장</strong>
+          </span>
           <PhotoPicker mode="camera" variant="hero" />
           <span className="hero-note">버릴 물건이 모두 보이게 찍어주세요</span>
         </div>
-
-        <PhotoPicker mode="album" variant="secondary" />
       </section>
+
+      <div className="home-album-card">
+        <PhotoPicker mode="album" variant="secondary" />
+      </div>
 
       <section className="recent-section" aria-labelledby="recent-title">
         <div className="section-heading">
           <div>
-            <span className="section-kicker">MY HISTORY</span>
+            <span className="section-kicker">나의 판별 기록</span>
             <h2 id="recent-title">최근 조회</h2>
           </div>
           <Link href="/history">전체보기 <span aria-hidden="true">›</span></Link>
@@ -72,7 +88,9 @@ export default function Home() {
               className={`recent-card__image ${recent.image ? "" : "image-placeholder"}`}
               style={recent.image ? { backgroundImage: `url(${recent.image})` } : undefined}
               aria-hidden="true"
-            />
+            >
+              <span>{recentCount}</span>
+            </div>
             <div className="recent-card__body">
               <span className="recent-card__date">{formatRelativeDate(recent.createdAt)}</span>
               <strong>{recentSummary.title}</strong>

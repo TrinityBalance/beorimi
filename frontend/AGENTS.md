@@ -5,7 +5,7 @@
 - Own `frontend/**`, Frontend tests, and `docs/frontend.md`.
 - Call Backend only; never call VLM directly or decide fees and disposal rules.
 - Use `shared/**` as the API contract. Do not guess response fields.
-- Read the relevant Next.js 16 guide under `frontend/node_modules/next/dist/docs/` before changing framework behavior.
+- Read the relevant installed Next.js guide under `frontend/node_modules/next/dist/docs/` before changing framework behavior.
 
 ## Minimal context lookup
 

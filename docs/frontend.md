@@ -74,7 +74,18 @@ npm --prefix frontend run build
 
 ## 배포
 
-루트 `amplify.yml`을 사용합니다. Amplify 환경 변수에 위 세 값을 등록하고 빌드한 뒤, 운영 도메인을 Backend `CORS_ALLOW_ORIGINS`에 정확한 origin으로 추가합니다.
+Frontend는 저장소 루트의 `amplify.yml`을 사용해 AWS Amplify에 배포하는 구성이 준비되어 있습니다.
+
+- 모노레포 앱 루트: `frontend`
+- Amplify 콘솔 환경 변수 `AMPLIFY_MONOREPO_APP_ROOT=frontend`
+- 설치: `npm ci`
+- 빌드: `npm run build`
+- 산출물: `.next`
+- Amplify 환경 변수에 `NEXT_PUBLIC_API_BASE_URL` 등록 필요
+- Amplify 환경 변수에 `NEXT_PUBLIC_COGNITO_USER_POOL_ID` 등록 필요
+- Amplify 환경 변수에 `NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID` 등록 필요
+
+`NEXT_PUBLIC_API_BASE_URL`에는 API Gateway HTTP API의 `ApiUrl` 출력을 등록합니다. `NEXT_PUBLIC_*` 값은 빌드된 브라우저 번들에 포함되므로 비밀값을 넣지 않습니다. 배포 후 Amplify 운영 도메인을 CloudFormation의 `FrontendOrigin`과 Backend CORS에 정확한 origin으로 등록합니다.
 
 ## 다음 작업
 
