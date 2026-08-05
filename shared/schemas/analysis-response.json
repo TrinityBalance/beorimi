@@ -14,11 +14,71 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "label", "confidence", "bbox"],
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "label",
+          "category",
+          "material",
+          "quantity",
+          "longest_side_cm",
+          "size_basis",
+          "reference_object",
+          "condition",
+          "contamination",
+          "confidence",
+          "needs_user_confirmation",
+          "confirm_question",
+          "bbox"
+        ],
         "properties": {
           "id": { "type": "integer" },
           "label": { "type": "string" },
+          "category": {
+            "type": "string",
+            "enum": [
+              "furniture",
+              "appliance_large",
+              "appliance_small",
+              "bedding",
+              "container",
+              "packaging",
+              "textile",
+              "battery_lamp",
+              "other"
+            ]
+          },
+          "material": {
+            "type": "string",
+            "enum": [
+              "fabric",
+              "wood",
+              "metal",
+              "plastic",
+              "glass",
+              "paper",
+              "mixed",
+              "unknown"
+            ]
+          },
+          "quantity": { "type": "integer" },
+          "longest_side_cm": { "type": ["integer", "null"] },
+          "size_basis": {
+            "type": "string",
+            "enum": ["reference_object", "typical_product", "unknown"]
+          },
+          "reference_object": { "type": ["string", "null"] },
+          "condition": {
+            "type": "string",
+            "enum": ["intact", "minor_damage", "broken", "unknown"]
+          },
+          "contamination": {
+            "type": "string",
+            "enum": ["clean", "residue", "unknown"]
+          },
           "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "needs_user_confirmation": { "type": "boolean" },
+          "confirm_question": { "type": ["string", "null"] },
           "bbox": {
             "type": ["array", "null"],
             "items": { "type": "integer", "minimum": 0, "maximum": 1000 },

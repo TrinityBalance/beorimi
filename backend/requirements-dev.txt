@@ -1,3 +1,4 @@
-# 개발·테스트 전용. App Runner 배포에는 설치되지 않는다.
+# 개발·테스트 전용. Lambda 배포 패키지에는 설치되지 않는다.
 -r requirements.txt
+uvicorn[standard]==0.52.1
 pytest==9.1.1

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analysis-job-request.json",
+  "title": "AnalysisJobRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["image_key"],
+  "properties": {
+    "image_key": { "type": "string", "minLength": 1, "maxLength": 1024 }
+  }
+}

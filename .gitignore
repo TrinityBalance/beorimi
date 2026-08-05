@@ -24,6 +24,7 @@ build/
 
 # Deployment
 .vercel/
+.aws-build/
 
 # TypeScript
 *.tsbuildinfo

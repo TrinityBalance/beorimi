@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analysis-job.json",
+  "title": "AnalysisJob",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "owner", "image_key", "status", "created_at", "updated_at"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "owner": { "type": "string" },
+    "image_key": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["queued", "processing", "completed", "failed"]
+    },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "item_name": { "type": ["string", "null"] },
+    "fee": { "type": ["integer", "null"], "minimum": 0 },
+    "message": { "type": ["string", "null"] },
+    "error_message": { "type": ["string", "null"] },
+    "observation": {
+      "anyOf": [
+        { "$ref": "analysis-response.json" },
+        { "type": "null" }
+      ]
+    }
+  }
+}

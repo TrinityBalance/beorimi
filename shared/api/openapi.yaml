@@ -1,7 +1,13 @@
 openapi: 3.1.0
 info:
   title: Beorimi API
-  version: 0.1.0
+  version: 0.3.0
+components:
+  securitySchemes:
+    cognitoJwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 paths:
   /api/health:
     get:
@@ -22,6 +28,8 @@ paths:
   /api/analysis:
     post:
       operationId: analyzeWaste
+      deprecated: true
+      description: Legacy synchronous endpoint. It is not exposed by the secure API Gateway.
       requestBody:
         required: true
         content:
@@ -35,6 +43,91 @@ paths:
             application/json:
               schema:
                 $ref: ../schemas/analysis-response.json
+        "400":
+          description: Empty or invalid image upload
+        "413":
+          description: Image exceeds the configured upload limit
+        "415":
+          description: Unsupported image format
+        "502":
+          description: VLM returned an unusable upstream response
+        "503":
+          description: VLM integration is not configured or unavailable
+        "504":
+          description: VLM request timed out
+  /api/uploads:
+    post:
+      operationId: createUploadUrl
+      security:
+        - cognitoJwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/upload-url-request.json
+      responses:
+        "200":
+          description: Short-lived S3 POST form scoped to the authenticated user and upload size limit
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/upload-url-response.json
+        "400":
+          description: Invalid filename, media type, or file size
+        "401":
+          description: Missing or invalid Cognito token
+        "503":
+          description: Upload storage is not configured
+  /api/analyses:
+    post:
+      operationId: createAnalysis
+      security:
+        - cognitoJwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../schemas/analysis-job-request.json
+      responses:
+        "202":
+          description: Analysis was queued
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/analysis-job.json
+        "400":
+          description: Image key does not belong to the authenticated user
+        "401":
+          description: Missing or invalid Cognito token
+        "404":
+          description: Uploaded image does not exist
+        "503":
+          description: Analysis queue is not configured
+  /api/analyses/{analysis_id}:
+    get:
+      operationId: getAnalysis
+      security:
+        - cognitoJwt: []
+      parameters:
+        - in: path
+          name: analysis_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Analysis owned by the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/analysis-job.json
+        "401":
+          description: Missing or invalid Cognito token
+        "404":
+          description: Analysis does not exist or belongs to another user
   /api/waste/{item_name}:
     get:
       operationId: getWaste
