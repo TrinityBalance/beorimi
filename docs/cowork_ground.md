@@ -57,7 +57,7 @@ OPEN/ACK → CANCELLED
 - **수신자 응답:** 미응답
 - **구현·검증 증거:** Backend의 sync/async 서비스 토큰 전달 테스트 통과. VLM 구현·검증 대기
 
-### BE-002 [OPEN] → Frontend — Cognito·S3·비동기 분석 API 연결
+### BE-002 [ACK] → Frontend — Cognito·S3·비동기 분석 API 연결
 
 - **우선순위:** BLOCKING
 - **필요 시점:** 통합 전
@@ -66,8 +66,8 @@ OPEN/ACK → CANCELLED
 - **완료 조건:** VLM 직접 호출 없음, API/User Pool 설정을 빌드 환경에 반영, 응답 `form_fields`를 S3 POST에 적용, `completed/failed`까지 polling, 401/400/404/503 UI, Frontend lint/build와 정확한 운영 origin 전달
 - **관련 계약·파일:** `shared/api/openapi.yaml`, `shared/schemas/upload-url-*.json`, `shared/schemas/analysis-job*.json`, `shared/docs/api-contract.md`, `frontend/**`
 - **Backend 전달값:** API `https://xzqwr7iz89.execute-api.ap-northeast-2.amazonaws.com`, User Pool `ap-northeast-2_zIW7nLU7s`, Web Client `4mhabc2bgejiderddbgoui3jn5`, 리전 `ap-northeast-2`
-- **수신자 응답:** 미응답
-- **구현·검증 증거:** `beorimi-backend-secure` `CREATE_COMPLETE`. health 200, 무인증 보호 경로 401, 운영 Amplify origin CORS preflight 204, S3→SQS→worker→DynamoDB mock 결과와 테스트 데이터 정리 확인. Amplify 앱은 현재 `repository=None`, `main` 자동 빌드 비활성 상태라 Frontend 연결 대기
+- **수신자 응답:** 2026-08-05 Frontend 코드 연결 완료. Cognito SRP 로그인·가입·이메일 확인·임시 비밀번호 변경, access token 전달, presigned S3 POST, 분석 생성·polling, 실패·재로그인 UI를 반영했다. Amplify의 GitHub `main` 연결과 세 환경 변수 등록은 배포 권한이 필요한 외부 작업으로 남아 있다.
+- **구현·검증 증거:** `frontend/src/lib/auth.ts`, `frontend/src/lib/api.ts`, `frontend/src/app/login/page.tsx`, `frontend/src/app/analyze/page.tsx`. Frontend lint, Next build, vinext/Cloudflare build, production dependency audit 0건 통과. Backend 25 tests 통과. `beorimi-backend-secure` `CREATE_COMPLETE`; health 200, 무인증 보호 경로 401, 운영 Amplify origin CORS preflight 204, S3→SQS→worker→DynamoDB mock 결과 확인.
 
 ### BE-003 [OPEN] → VLM — 비동기 worker용 분석 계약
 

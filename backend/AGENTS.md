@@ -4,6 +4,7 @@
 
 - Own `backend/**`, Backend tests, and `docs/backend.md`.
 - Own the public API, VLM orchestration, waste lookup, RAG, and final disposal decisions.
+- Keep production integration on AWS: Amplify origin → API Gateway Cognito authorizer → API/worker Lambda. Backend must not depend on Cloudflare runtime bindings.
 - Keep HTTP concerns in routes, business operations in services, and data access in repositories.
 - Update `shared/**` before changing a request or response contract.
 

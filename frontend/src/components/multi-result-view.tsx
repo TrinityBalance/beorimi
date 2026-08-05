@@ -150,6 +150,8 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
       quantity: Math.max(1, draftQuantity),
       estimatedFee: sizeOption?.fee,
       userConfirmed: true,
+      needs_user_confirmation: false,
+      confirm_question: null,
     }));
     setEditingItemId(null);
   }
@@ -228,7 +230,8 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
         <div className="multi-item-list">
           {result.items.map((item, index) => {
             const confidence = toPercent(item.confidence);
-            const needsConfirmation = item.confidence < 0.65;
+            const needsConfirmation =
+              item.needs_user_confirmation && !item.userConfirmed;
             const quantity = Math.max(1, item.quantity ?? 1);
 
             return (
@@ -279,6 +282,9 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
                     <span>{item.userConfirmed ? "사용자가 확인했어요" : needsConfirmation ? "품목 확인 필요" : "가능성 높음"}</span>
                     <small>{[item.size, `${quantity}개`].filter(Boolean).join(" · ")}</small>
                   </div>
+                  {needsConfirmation && item.confirm_question && (
+                    <p className="multi-item-card__question">{item.confirm_question}</p>
+                  )}
                   {item.userConfirmed && item.detectedLabel && item.detectedLabel !== item.label && (
                     <p className="multi-item-card__original">AI 판독: {item.detectedLabel}</p>
                   )}

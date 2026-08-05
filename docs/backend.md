@@ -119,6 +119,8 @@ python -m pytest backend/tests
 
 ## AWS 배포
 
+- 운영 경로는 `AWS Amplify → API Gateway HTTP API → Lambda`로 통일합니다. Backend는 Cloudflare Workers·Pages·D1·R2 바인딩에 의존하지 않습니다.
+- CORS에는 실제 Amplify 운영 origin만 정확히 등록하며, 사용하지 않는 미리보기·대체 호스팅 origin은 추가하지 않습니다.
 - 레거시: `infra/backend-lambda.yaml` — 기존 공개 Function URL 유지용
 - 권장: `infra/backend-secure.yaml` — Cognito, S3, DynamoDB, SQS, API/worker Lambda, HTTP API
 - 패키징: `infra/build-backend-lambda.ps1`

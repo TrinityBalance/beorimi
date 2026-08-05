@@ -32,7 +32,7 @@ export async function preparePhoto(file: File): Promise<PendingPhoto> {
 
     return {
       dataUrl: canvas.toDataURL("image/jpeg", JPEG_QUALITY),
-      name: file.name || `camera-${Date.now()}.jpg`,
+      name: toJpegFilename(file.name),
       width,
       height,
     };
@@ -86,10 +86,15 @@ export async function cropPhoto(
 
   return {
     dataUrl: canvas.toDataURL("image/jpeg", JPEG_QUALITY),
-    name: photo.name,
+    name: toJpegFilename(photo.name),
     width: sourceWidth,
     height: sourceHeight,
   };
+}
+
+function toJpegFilename(filename: string): string {
+  const baseName = filename.trim().replace(/\.[^.]+$/, "") || `camera-${Date.now()}`;
+  return `${baseName}.jpg`;
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {

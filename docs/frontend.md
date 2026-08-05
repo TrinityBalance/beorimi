@@ -78,22 +78,30 @@ src/
 
 기본 주소는 `NEXT_PUBLIC_API_BASE_URL`에서 읽으며, 미설정 시 `http://localhost:8000`을 사용합니다.
 
-```ts
-import { apiRequest } from "@/lib/api";
-```
+사진 분석은 Cognito 로그인 이후 다음 순서로 진행합니다.
 
-이미지 분석은 `POST /api/analysis`에 `multipart/form-data`의 `file` 필드로 전송합니다. 요청·응답 기준은 다음 파일을 따릅니다.
+1. Amplify Auth가 발급·갱신한 access token을 Backend 요청의 `Authorization: Bearer`에 넣습니다.
+2. `POST /api/uploads` 응답의 `form_fields`와 `file`을 `FormData`에 넣어 S3 `upload_url`로 직접 POST합니다.
+3. `POST /api/analyses`에 `image_key`를 보내 비동기 작업을 생성합니다.
+4. `GET /api/analyses/{id}`를 `completed` 또는 `failed`까지 polling합니다.
+5. `completed`의 `observation`을 결과 화면에 저장하고, `failed`와 400·401·404·503 응답은 재시도 가능한 사용자 메시지로 표시합니다.
+
+요청·응답 기준은 다음 파일을 따릅니다.
 
 - `shared/api/openapi.yaml`
-- `shared/schemas/analysis-request.json`
+- `shared/schemas/upload-url-request.json`
+- `shared/schemas/upload-url-response.json`
+- `shared/schemas/analysis-job.json`
 - `shared/schemas/analysis-response.json`
 
-공통 함수가 현재 JSON 요청을 전제로 하므로 파일 업로드 구현 시 `Content-Type`을 직접 고정하지 말고 브라우저가 `FormData` 경계를 설정하게 해야 합니다.
+S3 POST에는 `Content-Type`을 직접 고정하지 않고 브라우저가 `FormData` 경계를 설정하게 합니다. VLM을 프런트에서 직접 호출하거나 수수료·배출 규정을 추론하지 않습니다.
 
 ## 환경 변수
 
 ```dotenv
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+NEXT_PUBLIC_API_BASE_URL=https://example.execute-api.ap-northeast-2.amazonaws.com
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=ap-northeast-2_example
+NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID=exampleclientid
 ```
 
 로컬 파일 생성:
@@ -142,16 +150,16 @@ Frontend는 저장소 루트의 `amplify.yml`을 사용해 AWS Amplify에 배포
 - 설치: `npm ci`
 - 빌드: `npm run build`
 - 산출물: `.next`
-- Amplify 환경 변수에 `NEXT_PUBLIC_API_BASE_URL` 등록 필요
+- Amplify 환경 변수에 `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_COGNITO_USER_POOL_ID`, `NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID` 등록 필요
 
-`NEXT_PUBLIC_API_BASE_URL`은 빌드 시 번들에 들어가므로 Backend App Runner 주소를 배포 전에 설정하고 다시 빌드해야 합니다. 배포 후 해당 Amplify 도메인을 Backend의 `CORS_ALLOW_ORIGINS`에도 추가합니다.
+세 값은 빌드 시 번들에 들어가므로 Backend API Gateway와 Cognito User Pool 값을 배포 전에 설정하고 다시 빌드해야 합니다. 배포 후 해당 Amplify 도메인을 Backend의 `CORS_ALLOW_ORIGINS`에도 추가합니다.
 
 ## 다음 작업
 
 - [ ] 프로젝트 메타데이터와 한국어 문서 언어 설정
 - [ ] 모바일 홈과 사진 촬영·앨범 업로드
 - [ ] 사진 확인, 압축, 형식·용량 검증
-- [ ] 분석 API 연결과 단계별 진행 상태
+- [x] Cognito 로그인, S3 POST, 비동기 분석 API 연결과 단계별 진행 상태
 - [ ] 후보·신뢰도·확인 질문 결과 UI
 - [ ] 사용자 품목 수정과 최종 결과 UI
 - [ ] 공식 신고 링크와 조회 기록
