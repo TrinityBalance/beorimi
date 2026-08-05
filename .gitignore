@@ -1,6 +1,6 @@
 # Dependencies
-/node_modules/
-/.pnp/
+node_modules/
+.pnp/
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -9,14 +9,14 @@
 !.yarn/versions
 
 # Tests
-/coverage/
+coverage/
 
 # Next.js build output
-/.next/
-/out/
+.next/
+out/
 
 # Production build output
-/build/
+build/
 
 # Environment variables / secrets
 .env*
@@ -38,12 +38,21 @@ yarn-error.log*
 # Local VLM artifacts
 .vlm_cache/
 vlm_overlays/
+/vlm/data/photos/*
+!/vlm/data/photos/README.md
+/vlm/models/*
+!/vlm/models/.gitkeep
+/backend/app/data/*
+!/backend/app/data/README.md
 
 # Python artifacts
 __pycache__/
 *.py[cod]
+.pytest_cache/
 .venv/
 venv/
+*.db
+*.sqlite3
 
 # IDE / OS files
 .vs/

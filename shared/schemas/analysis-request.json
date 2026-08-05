@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analysis-request.json",
+  "title": "AnalysisRequest",
+  "description": "multipart/form-data의 file 필드로 전달하는 이미지 분석 요청",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["file"],
+  "properties": {
+    "file": {
+      "type": "string",
+      "format": "binary",
+      "contentMediaType": "image/*"
+    }
+  }
+}

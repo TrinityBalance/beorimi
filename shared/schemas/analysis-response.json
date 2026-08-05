@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "analysis-response.json",
+  "title": "AnalysisResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scene_type", "items", "notes"],
+  "properties": {
+    "scene_type": {
+      "type": "string",
+      "enum": ["single_item", "multi_item", "unclear"]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "confidence", "bbox"],
+        "properties": {
+          "id": { "type": "integer" },
+          "label": { "type": "string" },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "bbox": {
+            "type": ["array", "null"],
+            "items": { "type": "integer", "minimum": 0, "maximum": 1000 },
+            "minItems": 4,
+            "maxItems": 4
+          }
+        }
+      }
+    },
+    "notes": { "type": "string" }
+  }
+}

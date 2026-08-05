@@ -1,0 +1,93 @@
+SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["scene_type", "items", "notes"],
+    "properties": {
+        "scene_type": {
+            "type": "string",
+            "enum": ["single_item", "multi_item", "unclear"],
+        },
+        "items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": [
+                    "id",
+                    "label",
+                    "category",
+                    "material",
+                    "quantity",
+                    "longest_side_cm",
+                    "size_basis",
+                    "reference_object",
+                    "condition",
+                    "contamination",
+                    "confidence",
+                    "needs_user_confirmation",
+                    "confirm_question",
+                    "bbox",
+                ],
+                "properties": {
+                    "id": {"type": "integer"},
+                    "label": {
+                        "type": "string",
+                        "description": "수수료표 매칭에 사용할 한국어 일반 품목명",
+                    },
+                    "category": {
+                        "type": "string",
+                        "enum": [
+                            "furniture",
+                            "appliance_large",
+                            "appliance_small",
+                            "bedding",
+                            "container",
+                            "packaging",
+                            "textile",
+                            "battery_lamp",
+                            "other",
+                        ],
+                    },
+                    "material": {
+                        "type": "string",
+                        "enum": [
+                            "fabric",
+                            "wood",
+                            "metal",
+                            "plastic",
+                            "glass",
+                            "paper",
+                            "mixed",
+                            "unknown",
+                        ],
+                    },
+                    "quantity": {"type": "integer"},
+                    "longest_side_cm": {"type": ["integer", "null"]},
+                    "size_basis": {
+                        "type": "string",
+                        "enum": ["reference_object", "typical_product", "unknown"],
+                    },
+                    "reference_object": {"type": ["string", "null"]},
+                    "condition": {
+                        "type": "string",
+                        "enum": ["intact", "minor_damage", "broken", "unknown"],
+                    },
+                    "contamination": {
+                        "type": "string",
+                        "enum": ["clean", "residue", "unknown"],
+                    },
+                    "confidence": {"type": "number"},
+                    "needs_user_confirmation": {"type": "boolean"},
+                    "confirm_question": {"type": ["string", "null"]},
+                    "bbox": {
+                        "type": ["array", "null"],
+                        "items": {"type": "integer", "minimum": 0, "maximum": 1000},
+                        "minItems": 4,
+                        "maxItems": 4,
+                    },
+                },
+            },
+        },
+        "notes": {"type": "string"},
+    },
+}

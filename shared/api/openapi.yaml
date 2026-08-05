@@ -1,0 +1,51 @@
+openapi: 3.1.0
+info:
+  title: Beorimi API
+  version: 0.1.0
+paths:
+  /api/health:
+    get:
+      operationId: getHealth
+      responses:
+        "200":
+          description: Backend health
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service]
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+  /api/analysis:
+    post:
+      operationId: analyzeWaste
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: ../schemas/analysis-request.json
+      responses:
+        "200":
+          description: VLM observation
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/analysis-response.json
+  /api/waste/{item_name}:
+    get:
+      operationId: getWaste
+      parameters:
+        - in: path
+          name: item_name
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Waste disposal information
+        "501":
+          description: Repository is not connected yet
