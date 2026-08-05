@@ -30,13 +30,15 @@ AI 결과는 하나의 품목으로 단정하지 않습니다. 신뢰도가 낮�
 
 작업자는 시작할 때 자신의 주 역할을 **Frontend**, **Backend**, **VLM** 중 하나로 정하고 해당 작업 가이드를 먼저 읽습니다.
 
-| 역할 | 기본 소유 범위 | 먼저 읽을 문서 | 기본 검증 |
+| 역할 | 기본 소유 범위 | 상세 가이드 | 에이전트 카드 |
 | --- | --- | --- | --- |
-| Frontend | `frontend/`, `docs/frontend.md` | [`docs/frontend.md`](docs/frontend.md) | `npm --prefix frontend run lint`, `npm --prefix frontend run build` |
-| Backend | `backend/`, `docs/backend.md` | [`docs/backend.md`](docs/backend.md) | `python -m pytest backend/tests` |
-| VLM | `vlm/`, `docs/vlm.md` | [`docs/vlm.md`](docs/vlm.md) | `python -m pytest vlm/tests` |
+| Frontend | `frontend/` | [`docs/frontend.md`](docs/frontend.md) | [`frontend/AGENTS.md`](frontend/AGENTS.md) |
+| Backend | `backend/` | [`docs/backend.md`](docs/backend.md) | [`backend/AGENTS.md`](backend/AGENTS.md) |
+| VLM | `vlm/` | [`docs/vlm.md`](docs/vlm.md) | [`vlm/AGENTS.md`](vlm/AGENTS.md) |
 
 - 각 작업자는 자기 소유 범위의 구현·테스트·문서를 함께 관리합니다.
+- AI 에이전트는 짧은 역할 카드만 먼저 읽고, 상세 가이드의 목차와 협업 보드의 자기 활성 요청을 `rg`로 조회해 필요한 부분만 읽습니다.
+- 루트 README와 역할별 상세 가이드 전체를 매 작업마다 읽지 않습니다.
 - 다른 역할의 폴더는 명확한 연동 필요가 있을 때만 수정하고, 변경 이유와 영향을 관련 작업자에게 공유합니다.
 - API나 데이터 구조가 바뀌면 `shared/` 계약을 먼저 수정한 뒤 제공 서비스와 소비 서비스를 순서대로 반영합니다.
 - 여러 영역에 걸친 작업은 하나의 역할인 것처럼 처리하지 않고, 영향을 받는 모든 영역의 작업 가이드와 검증 명령을 적용합니다.

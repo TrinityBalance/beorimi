@@ -8,42 +8,30 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Beorimi role rules
+# Beorimi agent router
 
-## Choose a role before editing
+## Minimal startup
 
-Every task must identify one primary role from **Frontend**, **Backend**, or **VLM** before making changes. Read the matching guide completely and use it as the source of truth for that area.
+Run all lookup and verification commands from the repository root.
 
-| Role | Default ownership | Required guide | Required verification |
-| --- | --- | --- | --- |
-| Frontend | `frontend/**`, `docs/frontend.md` | `docs/frontend.md` | `npm --prefix frontend run lint` and `npm --prefix frontend run build` |
-| Backend | `backend/**`, `docs/backend.md` | `docs/backend.md` | `python -m pytest backend/tests` |
-| VLM | `vlm/**`, `docs/vlm.md` | `docs/vlm.md` | `python -m pytest vlm/tests` |
+1. Choose one primary role: Frontend, Backend, or VLM.
+2. Read only that role's compact card: `frontend/AGENTS.md`, `backend/AGENTS.md`, or `vlm/AGENTS.md`.
+3. Run the card's `rg` command to fetch active requests addressed to the role. If it returns no match, do not read `docs/cowork_ground.md` in full.
+4. List the detailed guide headings with `rg -n "^##|^###" docs/<role>.md`, then read only sections relevant to the task. Read the full guide only for onboarding or a broad role-wide refactor.
+5. Do not read the root `README.md` for routine implementation work; it is the human-facing overview.
 
-## Stay within the role boundary
+## Shared invariants
 
-- Work in the primary role's owned paths by default, including its tests and guide.
-- Do not modify another role's directory for convenience. Cross-role edits are allowed only when the requested behavior genuinely requires integration across that boundary.
-- When a task crosses roles, read every affected role guide, keep each service's responsibilities separate, and run every affected role's verification.
-- Frontend calls Backend only. It must not call VLM directly or decide fees and disposal rules.
-- VLM returns image observations only. It must not decide fees, reporting requirements, or final disposal instructions.
-- Backend owns the public API, VLM orchestration, waste-data lookup, RAG, and final disposal decisions.
+- Frontend calls Backend only. VLM returns image observations only. Backend owns the public API and final disposal decisions.
+- `shared/api/openapi.yaml`, `shared/schemas/**`, and `shared/docs/api-contract.md` are the contract source of truth.
+- Contract changes proceed in this order: shared contract → providing service → consuming service.
+- Cross-role edits require every affected role card and its verification, but not every detailed guide in full.
+- Keep role details in `docs/<role>.md`; change the root README only for project-wide workflow or architecture changes.
+- Preserve unrelated edits and never put secrets or personal data in code, docs, or the cowork board.
 
-## Contract-first integration
+## Cross-role requests
 
-- `shared/api/openapi.yaml`, `shared/schemas/**`, and `shared/docs/api-contract.md` are the service contract source of truth.
-- For request or response changes, update the shared contract first, then the providing service, then every consuming service.
-- Treat `shared/**`, root deployment configuration, and the root `README.md` as common scope. Change them only when the cross-service contract, deployment flow, or project-wide workflow changes.
-- Keep area-specific implementation details in `docs/frontend.md`, `docs/backend.md`, or `docs/vlm.md`; do not expand the root README with duplicated details.
-- Preserve unrelated work from other roles and never revert it to make the current role's change easier.
-
-## Cross-role requirement board
-
-- Read `docs/cowork_ground.md` after the primary role guide and before editing. Check every active request addressed to the current role.
-- Record a request in the board before depending on another role's unfinished work or asking another role to change an interface, behavior, configuration, or deployment input.
-- Do not add role-local TODOs to the board. Use it only for requirements whose completion depends on another role.
-- Use the requesting role's queue and next available prefix number. During concurrent work, edit only that queue and request blocks assigned to the current role; preserve every unrelated entry and its ordering.
-- The requester owns the requirement and acceptance criteria. The receiver owns acknowledgement, blockers, implementation response, and verification evidence. Only the requester closes a `READY` request as `DONE` after integration verification.
-- For contract changes, link the affected `shared/**` files in the request and still follow the contract-first update order.
-- Before finishing a task, re-read the board and update every request created or handled during the task to its truthful current status. Do not mark unresolved work `DONE`.
-- Never put secrets, credentials, personal data, or sensitive operational values in the board.
+- Use `docs/cowork_ground.md` only when another role must provide work, a decision, or an interface change.
+- Do not use it for role-local TODOs. Do not read or rewrite unrelated request blocks.
+- The requester defines acceptance criteria; the receiver records response and evidence; only the requester closes `READY` as `DONE`.
+- Before finishing, update only request IDs created or handled during the task to their truthful status.
