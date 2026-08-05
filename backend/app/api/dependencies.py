@@ -1,3 +1,10 @@
+"""의존성 조립(DI).
+
+라우트 함수는 `Depends(get_upload_service)` 처럼 "무엇이 필요한지"만 선언하고,
+그 부품을 실제로 만드는 방법은 이 파일에만 둔다. 테스트는 이 함수들을 가짜로
+바꿔치기(`dependency_overrides`)해서 AWS 없이 돌린다.
+"""
+
 from functools import lru_cache
 
 import boto3
@@ -22,6 +29,8 @@ def get_vlm_client() -> VlmClient:
     )
 
 
+# AIDEV-NOTE: lru_cache 로 boto3 클라이언트를 재사용한다. 생성 비용이 커서 요청마다 만들면
+#             Lambda 응답이 눈에 띄게 느려진다(웜 컨테이너에서 재사용됨).
 @lru_cache
 def get_s3_client():
     # AIDEV-NOTE: Explicit SigV4 keeps presigned URLs on the regional host; the default can redirect new Seoul buckets.

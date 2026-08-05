@@ -1,3 +1,10 @@
+"""환경변수를 읽어 Settings 한 덩어리로 만든다.
+
+os.getenv 는 이 파일에서만 쓰고, 나머지 코드는 settings 객체만 본다.
+`_positive_int`/`_positive_float` 는 잘못된 값이 런타임 한참 뒤에 터지지 않도록
+import 시점에 바로 실패시킨다 — Lambda 라면 첫 호출에서 즉시 드러난다.
+"""
+
 import os
 from dataclasses import dataclass
 

@@ -1,3 +1,9 @@
+"""요청·응답 스키마.
+
+pydantic 이 라우트 함수 실행 *전에* 검사하므로, 형식이 어긋난 요청은 서비스 계층까지
+내려오지 않고 422 로 끊긴다. 응답 모델은 DynamoDB 레코드에서 외부에 내보낼 필드만 고른다.
+"""
+
 from typing import Literal
 
 from pydantic import BaseModel, Field

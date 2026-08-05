@@ -1,3 +1,9 @@
+"""POST /api/analyses (접수) · GET /api/analyses/{id} (상태 조회).
+
+접수는 즉시 202 를 돌려주고 실제 분석은 워커가 한다. 클라이언트는 GET 을 반복 호출해
+status 가 completed 또는 failed 가 될 때까지 기다린다.
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from ..auth import AuthenticatedUser, get_current_user
