@@ -35,6 +35,11 @@ const SIZE_BASES = new Set([
 ]);
 const CONDITIONS = new Set(["intact", "minor_damage", "broken", "unknown"]);
 const CONTAMINATION_LEVELS = new Set(["clean", "residue", "unknown"]);
+const BULKY_WASTE_STATUSES = new Set([
+  "eligible",
+  "not_eligible",
+  "needs_confirmation",
+]);
 
 export function isAnalysisResponse(
   value: unknown,
@@ -82,7 +87,15 @@ export function isAnalysisResponse(
           (Number.isInteger(item.estimated_fee) && item.estimated_fee >= 0)) &&
         (item.fee_size_label === undefined ||
           item.fee_size_label === null ||
-          typeof item.fee_size_label === "string"),
+          typeof item.fee_size_label === "string") &&
+        (item.bulky_waste_status === undefined ||
+          BULKY_WASTE_STATUSES.has(item.bulky_waste_status)) &&
+        (item.disposal_notice === undefined ||
+          item.disposal_notice === null ||
+          typeof item.disposal_notice === "string") &&
+        (item.disposal_guidance_url === undefined ||
+          item.disposal_guidance_url === null ||
+          typeof item.disposal_guidance_url === "string"),
     ) &&
     typeof result.notes === "string"
   );

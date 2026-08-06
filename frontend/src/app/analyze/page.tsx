@@ -90,7 +90,7 @@ export default function AnalyzePage() {
         sceneType: result.scene_type,
         items: result.items.map((item) => ({
           ...item,
-          selected: true,
+          selected: item.bulky_waste_status !== "not_eligible",
           detectedLabel: item.label,
           quantity: Math.max(1, item.quantity),
           size: item.fee_size_label ?? (item.longest_side_cm

@@ -20,7 +20,9 @@ export function isLegacyResult(
 export function getSelectedItems(
   result: MultiWasteAnalysisResult,
 ): DetectedWasteItem[] {
-  return result.items.filter((item) => item.selected);
+  return result.items.filter(
+    (item) => item.selected && item.bulky_waste_status !== "not_eligible",
+  );
 }
 
 export function getResultSummary(result: WasteAnalysisResult) {

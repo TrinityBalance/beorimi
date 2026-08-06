@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { classifyDisposal, normalizeItemName } from "./disposal.ts";
 
 const suspiciousPhrases = [
   "ignore previous",
@@ -182,11 +183,6 @@ type FeeCatalogRule = {
   max_longest_side_cm: number | null;
 };
 
-function normalizeItemName(value: string) {
-  return value.normalize("NFKC").toLocaleLowerCase("ko-KR")
-    .replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-}
-
 function findFeeRule(item: Record<string, unknown>, rules: FeeCatalogRule[]) {
   const name = typeof item.label === "string" ? normalizeItemName(item.label) : "";
   const category = typeof item.category === "string" ? item.category : "";
@@ -229,11 +225,13 @@ async function enrichObservation(
     items: items.map((rawItem) => {
       if (!isRecord(rawItem)) return rawItem;
       const rule = findFeeRule(rawItem, rules);
+      const disposal = classifyDisposal(rawItem, Boolean(rule));
       return {
         ...rawItem,
         label: rule?.item_name ?? rawItem.label,
         estimated_fee: rule?.fee ?? null,
         fee_size_label: rule?.size_label ?? null,
+        ...disposal,
       };
     }),
   };
@@ -276,7 +274,7 @@ async function observeImage(signedUrl: string) {
           content: [{
             type: "input_text",
             text:
-              "Return only the requested JSON observation for visible household waste or bulky items. Use uncertainty fields when visual evidence is insufficient. For every bbox, use the full submitted image as the 0..1000 coordinate frame, tightly enclose only that item's visible pixels, exclude shadows, background, and other items, and verify left < right and top < bottom before returning it. Use null only when the item's location cannot be determined.",
+              "Return only the requested JSON observation for visible household items the user may want to discard. Include clearly visible recyclable or separately collected items so the backend can classify them; never decide disposal eligibility yourself. Use uncertainty fields when visual evidence is insufficient. For every bbox, use the full submitted image as the 0..1000 coordinate frame, tightly enclose only that item's visible pixels, exclude shadows, background, and other items, and verify left < right and top < bottom before returning it. Use null only when the item's location cannot be determined.",
           }, { type: "input_image", image_url: signedUrl, detail: "original" }],
         },
       ],

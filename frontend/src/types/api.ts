@@ -45,6 +45,9 @@ export type BackendAnalysisItem = {
   bbox: BoundingBox | null;
   estimated_fee?: number | null;
   fee_size_label?: string | null;
+  bulky_waste_status?: "eligible" | "not_eligible" | "needs_confirmation";
+  disposal_notice?: string | null;
+  disposal_guidance_url?: string | null;
 };
 
 export type BackendAnalysisResponse = {

@@ -3308,6 +3308,11 @@ summary:focus-visible {
   opacity: 0.42;
   filter: grayscale(1);
 }
+.detection-box.is-ineligible {
+  --box-color: #ff806b;
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+}
 .detection-box > span {
   position: absolute;
   top: -15px;
@@ -3396,6 +3401,10 @@ summary:focus-visible {
   font-size: 10px;
   font-weight: 760;
 }
+.multi-select-all:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
 .multi-items-section > .section-description {
   margin-top: 8px;
 }
@@ -3450,6 +3459,14 @@ summary:focus-visible {
   --item-final-opacity: 0.48;
   opacity: 0.48;
 }
+.multi-item-card.is-ineligible {
+  --item-color: #ff806b;
+  border-color: #e6a296;
+  background: #fff8f6;
+}
+.multi-item-card.is-ineligible::before {
+  background: #e45e48;
+}
 .multi-item-card__toggle {
   display: grid;
   width: 34px;
@@ -3466,6 +3483,12 @@ summary:focus-visible {
 .is-selected .multi-item-card__toggle {
   border-color: var(--ink);
   background: var(--item-color);
+}
+.is-ineligible .multi-item-card__toggle {
+  border-color: #d96b59;
+  background: #ffe3de;
+  color: #a53e2d;
+  cursor: not-allowed;
 }
 .multi-item-card__number {
   --item-color: var(--lime);
@@ -3573,6 +3596,9 @@ summary:focus-visible {
   font-size: 10px;
   font-weight: 780;
 }
+.is-ineligible .multi-item-card__meta span {
+  color: #b34836;
+}
 .multi-item-card__meta small {
   overflow: hidden;
   color: #969b92;
@@ -3594,6 +3620,33 @@ summary:focus-visible {
   font-size: 8.5px;
   font-weight: 700;
   line-height: 1.45;
+}
+.multi-item-card__disposal-notice {
+  margin: 8px 4px 0;
+  padding: 9px 10px;
+  border-radius: 10px;
+  background: #ffe9e4;
+  color: #7f4439;
+  font-size: 9px;
+}
+.multi-item-card__disposal-notice summary {
+  width: fit-content;
+  cursor: pointer;
+  color: #ad3f2c;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.multi-item-card__disposal-notice p {
+  margin: 8px 0 6px;
+  line-height: 1.55;
+}
+.multi-item-card__disposal-notice a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #8c3426;
+  font-weight: 850;
 }
 .multi-notes-card {
   background: #eef2e8;
@@ -4005,6 +4058,13 @@ summary:focus-visible {
 .correction-field > input:focus {
   border-color: #9fb51d;
   box-shadow: 0 0 0 3px rgba(198, 225, 45, 0.18);
+}
+.correction-field__hint {
+  display: block;
+  margin-top: 7px;
+  color: #858b81;
+  font-size: 9px;
+  line-height: 1.55;
 }
 .correction-catalog {
   display: flex;

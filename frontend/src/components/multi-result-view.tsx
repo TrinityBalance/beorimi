@@ -33,7 +33,11 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
   const [draftQuantity, setDraftQuantity] = useState(1);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const selectedItems = getSelectedItems(result);
-  const allSelected = selectedItems.length === result.items.length;
+  const reportableItems = result.items.filter(
+    (item) => item.bulky_waste_status !== "not_eligible",
+  );
+  const allSelected = reportableItems.length > 0 &&
+    selectedItems.length === reportableItems.length;
   const estimatedTotal = getEstimatedFeeTotal(selectedItems);
   const catalog = result.catalog?.length
     ? result.catalog
@@ -83,13 +87,18 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
   }
 
   function toggleItem(id: number) {
-    updateItem(id, (item) => ({ ...item, selected: !item.selected }));
+    updateItem(id, (item) => item.bulky_waste_status === "not_eligible"
+      ? item
+      : { ...item, selected: !item.selected });
   }
 
   function toggleAll() {
     onChange({
       ...result,
-      items: result.items.map((item) => ({ ...item, selected: !allSelected })),
+      items: result.items.map((item) => ({
+        ...item,
+        selected: item.bulky_waste_status === "not_eligible" ? false : !allSelected,
+      })),
     });
   }
 
@@ -145,14 +154,31 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
 
     const catalogItem = catalog.find((item) => item.name === draftLabel.trim());
     const sizeOption = catalogItem?.sizes.find((size) => size.label === draftSize);
+    const correctedSize = draftSize.trim();
+    const correctedLabel = draftLabel.trim();
+    const labelChanged = correctedLabel !== editingItem.label;
 
     updateItem(editingItem.id, (item) => ({
       ...item,
       detectedLabel: item.detectedLabel ?? item.label,
-      label: draftLabel.trim(),
-      size: sizeOption?.label,
+      label: correctedLabel,
+      size: correctedSize || undefined,
       quantity: Math.max(1, draftQuantity),
       estimatedFee: sizeOption?.fee,
+      estimated_fee: sizeOption?.fee ?? null,
+      fee_size_label: correctedSize || null,
+      selected: labelChanged && item.bulky_waste_status === "not_eligible"
+        ? true
+        : item.selected,
+      bulky_waste_status: labelChanged
+        ? "needs_confirmation"
+        : item.bulky_waste_status,
+      disposal_notice: labelChanged
+        ? "사용자가 품목명을 수정했습니다. 공식 수거대상 목록에서 유사 품목 또는 기타 품목으로 신고 가능한지 확인해주세요."
+        : item.disposal_notice,
+      disposal_guidance_url: labelChanged
+        ? "https://clean.gangnam.go.kr/use/biwa/USEBIWA01000000.do"
+        : item.disposal_guidance_url,
       userConfirmed: true,
       needs_user_confirmation: false,
       confirm_question: null,
@@ -193,10 +219,11 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
             item.bbox ? (
               <button
                 type="button"
-                className={`detection-box ${item.selected ? "is-selected" : "is-excluded"}`}
+                className={`detection-box ${item.bulky_waste_status === "not_eligible" ? "is-ineligible" : item.selected ? "is-selected" : "is-excluded"}`}
                 style={getBoxStyle(item.bbox, itemColors[index % itemColors.length], index)}
                 onClick={() => toggleItem(item.id)}
-                aria-label={`${item.label} ${item.selected ? "선택 해제" : "선택"}`}
+                disabled={item.bulky_waste_status === "not_eligible"}
+                aria-label={item.bulky_waste_status === "not_eligible" ? `${item.label} 대형폐기물 배출 대상 아님` : `${item.label} ${item.selected ? "선택 해제" : "선택"}`}
                 key={item.id}
               >
                 <span>{index + 1}</span>
@@ -223,7 +250,7 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
             <span className="section-number">01</span>
             <h2>찾은 품목</h2>
           </div>
-          <button className="multi-select-all" type="button" onClick={toggleAll}>
+          <button className="multi-select-all" type="button" disabled={reportableItems.length === 0} onClick={toggleAll}>
             {allSelected ? "전체 해제" : "전체 선택"}
           </button>
         </div>
@@ -237,10 +264,11 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
             const needsConfirmation =
               item.needs_user_confirmation && !item.userConfirmed;
             const quantity = Math.max(1, item.quantity ?? 1);
+            const isNotEligible = item.bulky_waste_status === "not_eligible";
 
             return (
               <article
-                className={`multi-item-card ${item.selected ? "is-selected" : "is-excluded"}`}
+                className={`multi-item-card ${isNotEligible ? "is-ineligible" : item.selected ? "is-selected" : "is-excluded"}`}
                 style={{
                   "--item-color": itemColors[index % itemColors.length],
                   "--item-order": index,
@@ -251,10 +279,11 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
                   className="multi-item-card__toggle"
                   type="button"
                   onClick={() => toggleItem(item.id)}
+                  disabled={isNotEligible}
                   aria-pressed={item.selected}
-                  aria-label={`${item.label} ${item.selected ? "제외" : "선택"}`}
+                  aria-label={isNotEligible ? `${item.label} 대형폐기물 배출 대상 아님` : `${item.label} ${item.selected ? "제외" : "선택"}`}
                 >
-                  {item.selected ? "✓" : ""}
+                  {isNotEligible ? "!" : item.selected ? "✓" : ""}
                 </button>
 
                 <span
@@ -274,7 +303,7 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
                     <button type="button" onClick={() => openCorrection(item)}>수정</button>
                     <strong>{confidence}%</strong>
                   </div>
-                  {item.estimatedFee !== undefined && (
+                  {!isNotEligible && item.estimatedFee !== undefined && (
                     <div className="multi-item-card__fee">
                       <span>
                         {result.demo ? "데모 예상 수수료" : "예상 수수료"}
@@ -287,9 +316,20 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
                     <span style={{ width: `${confidence}%` }} />
                   </div>
                   <div className="multi-item-card__meta">
-                    <span>{item.userConfirmed ? "사용자가 확인했어요" : needsConfirmation ? "품목 확인 필요" : "가능성 높음"}</span>
+                    <span>{isNotEligible ? "폐기대상이 아닙니다" : item.userConfirmed ? "사용자가 확인했어요" : needsConfirmation ? "품목 확인 필요" : "가능성 높음"}</span>
                     <small>{[item.size, `${quantity}개`].filter(Boolean).join(" · ")}</small>
                   </div>
+                  {isNotEligible && item.disposal_notice && (
+                    <details className="multi-item-card__disposal-notice">
+                      <summary>[안내]</summary>
+                      <p>{item.disposal_notice}</p>
+                      {item.disposal_guidance_url && (
+                        <a href={item.disposal_guidance_url} target="_blank" rel="noreferrer">
+                          강남구 공식 규정 보기 <span aria-hidden="true">↗</span>
+                        </a>
+                      )}
+                    </details>
+                  )}
                   {needsConfirmation && item.confirm_question && (
                     <p className="multi-item-card__question">{item.confirm_question}</p>
                   )}
@@ -471,7 +511,7 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
               {selectedCatalogItem && selectedCatalogItem.sizes.length > 0 && (
                 <div className="correction-field correction-sizes">
                   <div className="correction-field__heading">
-                    <span id="correction-size-label">규격</span>
+                    <span id="correction-size-label">추천 규격</span>
                     <button
                       className={showSizeGuide ? "is-open" : ""}
                       type="button"
@@ -522,6 +562,21 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
                   </div>
                 </div>
               )}
+
+              <div className="correction-field">
+                <label htmlFor="corrected-size">크기·규격 직접 수정</label>
+                <input
+                  id="corrected-size"
+                  value={draftSize}
+                  maxLength={50}
+                  onChange={(event) => setDraftSize(event.target.value)}
+                  placeholder="예: 가로 120cm, 대형, 2~3인용"
+                  aria-describedby="corrected-size-hint"
+                />
+                <small className="correction-field__hint" id="corrected-size-hint">
+                  추천 규격을 고른 뒤 문구를 직접 다듬어도 돼요. 직접 입력하면 금액은 공식 신고 단계에서 확인해주세요.
+                </small>
+              </div>
 
               <div className="correction-field correction-quantity">
                 <span>수량</span>

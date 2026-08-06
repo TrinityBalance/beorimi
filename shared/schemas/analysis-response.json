@@ -95,6 +95,20 @@
           "fee_size_label": {
             "type": ["string", "null"],
             "description": "Catalog size category used for the fee estimate."
+          },
+          "bulky_waste_status": {
+            "type": "string",
+            "enum": ["eligible", "not_eligible", "needs_confirmation"],
+            "description": "Backend-owned classification against official bulky-waste and separate-collection rules."
+          },
+          "disposal_notice": {
+            "type": ["string", "null"],
+            "description": "User-facing explanation for the backend disposal classification."
+          },
+          "disposal_guidance_url": {
+            "type": ["string", "null"],
+            "format": "uri",
+            "description": "Official local-government guidance supporting the classification."
           }
         }
       }
