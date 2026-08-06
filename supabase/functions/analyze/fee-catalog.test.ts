@@ -35,6 +35,8 @@ test("an official item with one specification returns its fee", () => {
 
   assert.equal(match.matched, true);
   assert.equal(match.fee, 20000);
+  assert.equal(match.feeMin, 20000);
+  assert.equal(match.feeMax, 20000);
 });
 
 test("a specification stated in the label selects the official row", () => {
@@ -47,7 +49,7 @@ test("a specification stated in the label selects the official row", () => {
   assert.equal(match.sizeLabel, "3인용");
 });
 
-test("an ambiguous specification does not guess a fee", () => {
+test("an ambiguous specification returns the official fee range", () => {
   const match = findFeeCatalogMatch(
     { label: "소파", category: "furniture" },
     [rule("sofa-2", 5000, "2인용"), rule("sofa-3", 7000, "3인용")],
@@ -56,6 +58,32 @@ test("an ambiguous specification does not guess a fee", () => {
   assert.equal(match.matched, true);
   assert.equal(match.itemName, "쇼파");
   assert.equal(match.fee, null);
+  assert.equal(match.feeMin, 5000);
+  assert.equal(match.feeMax, 7000);
+});
+
+test("a generic chair still exposes an expected fee range", () => {
+  const match = findFeeCatalogMatch(
+    { label: "사무용 의자", category: "furniture" },
+    [
+      rule("chair-single", 2000, "1인용", {
+        item_name: "의자",
+        aliases: ["의자", "chair"],
+      }),
+      rule("chair-bench", 3000, "장의자", {
+        item_name: "의자",
+        aliases: ["의자", "chair"],
+      }),
+      rule("chair-wheeled", 5000, "바퀴달린의자(대형)", {
+        item_name: "의자",
+        aliases: ["의자", "chair"],
+      }),
+    ],
+  );
+
+  assert.equal(match.fee, null);
+  assert.equal(match.feeMin, 2000);
+  assert.equal(match.feeMax, 5000);
 });
 
 test("a numeric range in a label remains ambiguous", () => {
@@ -65,6 +93,8 @@ test("a numeric range in a label remains ambiguous", () => {
   );
 
   assert.equal(match.fee, null);
+  assert.equal(match.feeMin, 5000);
+  assert.equal(match.feeMax, 7000);
 });
 
 test("explicit longest-side rules can use a measured longest side", () => {

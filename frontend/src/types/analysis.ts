@@ -27,6 +27,8 @@ export type WasteCatalogItem = {
 export type DetectedWasteItem = BackendAnalysisItem & {
   selected: boolean;
   estimatedFee?: number;
+  estimatedFeeMin?: number;
+  estimatedFeeMax?: number;
   detectedLabel?: string;
   size?: string;
   userConfirmed?: boolean;

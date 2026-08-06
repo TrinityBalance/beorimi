@@ -7,8 +7,9 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { getResult } from "@/lib/analysis-store";
 import {
-  getEstimatedFeeTotal,
-  getItemEstimatedFee,
+  formatEstimatedFeeRange,
+  getEstimatedFeeRangeTotal,
+  getItemEstimatedFeeRange,
   getSelectedItems,
   isMultiResult,
 } from "@/lib/result";
@@ -41,14 +42,12 @@ export default function ReportPage() {
     if (!result) return;
 
     const itemLines = isMultiResult(result)
-      ? getSelectedItems(result).map(
-          (item, index) =>
-            `품목 ${index + 1}: ${item.label}${item.size ? ` · ${item.size}` : ""} · ${Math.max(1, item.quantity ?? 1)}개${
-              item.estimatedFee === undefined
-                ? ""
-                : ` · 데모 예상 ${getItemEstimatedFee(item).toLocaleString("ko-KR")}원`
-            }`,
-        )
+      ? getSelectedItems(result).map((item, index) => {
+          const feeRange = getItemEstimatedFeeRange(item);
+          return `품목 ${index + 1}: ${item.label}${item.size ? ` · ${item.size}` : ""} · ${Math.max(1, item.quantity ?? 1)}개${
+            feeRange ? ` · 예상 ${formatEstimatedFeeRange(feeRange)}` : ""
+          }`;
+        })
       : [
           `품목: ${result.primary.name}`,
           `예상 수수료: ${result.primary.fee.toLocaleString("ko-KR")}원`,
@@ -92,7 +91,7 @@ export default function ReportPage() {
 
   const isMulti = isMultiResult(result);
   const selectedItems = isMulti ? getSelectedItems(result) : [];
-  const estimatedTotal = isMulti ? getEstimatedFeeTotal(selectedItems) : null;
+  const estimatedTotal = isMulti ? getEstimatedFeeRangeTotal(selectedItems) : null;
   const addressReady = address.trim().length > 0;
   const dateReady = date.length > 0;
   const checklistCompleted = [
@@ -116,32 +115,35 @@ export default function ReportPage() {
 
       {isMulti ? (
         <section className="report-multi-list" aria-label="신고 준비 품목">
-          {selectedItems.map((item, index) => (
-            <article
-              style={{
-                "--item-color": reportItemColors[index % reportItemColors.length],
-                "--item-order": index,
-              } as CSSProperties}
-              key={item.id}
-            >
-              <span>{index + 1}</span>
-              <div>
-                <small>{item.userConfirmed ? "사용자 확인 품목" : "판독한 품목"}</small>
-                <strong>
-                  {item.label}{item.size ? ` · ${item.size}` : ""} · {Math.max(1, item.quantity ?? 1)}개
-                </strong>
-              </div>
-              <em>
-                {item.estimatedFee === undefined
-                  ? `${Math.round(item.confidence * 100)}%`
-                  : `${result.demo ? "데모 예상 " : "예상 "}${getItemEstimatedFee(item).toLocaleString("ko-KR")}원`}
-              </em>
-            </article>
-          ))}
+          {selectedItems.map((item, index) => {
+            const feeRange = getItemEstimatedFeeRange(item);
+            return (
+              <article
+                style={{
+                  "--item-color": reportItemColors[index % reportItemColors.length],
+                  "--item-order": index,
+                } as CSSProperties}
+                key={item.id}
+              >
+                <span>{index + 1}</span>
+                <div>
+                  <small>{item.userConfirmed ? "사용자 확인 품목" : "판독한 품목"}</small>
+                  <strong>
+                    {item.label}{item.size ? ` · ${item.size}` : ""} · {Math.max(1, item.quantity ?? 1)}개
+                  </strong>
+                </div>
+                <em>
+                  {feeRange
+                    ? `${result.demo ? "데모 예상 " : "예상 "}${formatEstimatedFeeRange(feeRange)}`
+                    : `${Math.round(item.confidence * 100)}%`}
+                </em>
+              </article>
+            );
+          })}
           <p>
             {estimatedTotal === null
               ? "품목별 규격과 수수료는 공식 신고 페이지에서 최종 확인해주세요."
-              : `선택 품목 데모 예상 합계 ${estimatedTotal.toLocaleString("ko-KR")}원 · 공식 신고 페이지에서 최종 확인해주세요.`}
+              : `선택 품목 예상 합계 ${formatEstimatedFeeRange(estimatedTotal)} · 공식 신고 페이지에서 최종 확인해주세요.`}
           </p>
         </section>
       ) : (
@@ -264,7 +266,7 @@ export default function ReportPage() {
               <strong>품목·규격·수량을 확인했어요</strong>
               <small>
                 {isMulti
-                  ? `${selectedItems.length}개 품목${estimatedTotal === null ? "" : ` · 데모 예상 ${estimatedTotal.toLocaleString("ko-KR")}원`}`
+                  ? `${selectedItems.length}개 품목${estimatedTotal === null ? "" : ` · 예상 ${formatEstimatedFeeRange(estimatedTotal)}`}`
                   : `${result.primary.name} · 예상 ${result.primary.fee.toLocaleString("ko-KR")}원`}
               </small>
             </span>

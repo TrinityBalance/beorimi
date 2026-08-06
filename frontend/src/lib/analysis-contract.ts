@@ -85,6 +85,17 @@ export function isAnalysisResponse(
         (item.estimated_fee === undefined ||
           item.estimated_fee === null ||
           (Number.isInteger(item.estimated_fee) && item.estimated_fee >= 0)) &&
+        (item.estimated_fee_min === undefined ||
+          item.estimated_fee_min === null ||
+          (Number.isInteger(item.estimated_fee_min) && item.estimated_fee_min >= 0)) &&
+        (item.estimated_fee_max === undefined ||
+          item.estimated_fee_max === null ||
+          (Number.isInteger(item.estimated_fee_max) && item.estimated_fee_max >= 0)) &&
+        (item.estimated_fee_min === undefined ||
+          item.estimated_fee_min === null ||
+          item.estimated_fee_max === undefined ||
+          item.estimated_fee_max === null ||
+          item.estimated_fee_min <= item.estimated_fee_max) &&
         (item.fee_size_label === undefined ||
           item.fee_size_label === null ||
           typeof item.fee_size_label === "string") &&

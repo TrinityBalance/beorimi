@@ -96,6 +96,8 @@ export default function AnalyzePage() {
             ? `최장변 약 ${item.longest_side_cm}cm`
             : undefined),
           estimatedFee: item.estimated_fee ?? undefined,
+          estimatedFeeMin: item.estimated_fee_min ?? undefined,
+          estimatedFeeMax: item.estimated_fee_max ?? undefined,
           userConfirmed: !item.needs_user_confirmation,
         })),
         notes: result.notes,

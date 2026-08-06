@@ -1,6 +1,6 @@
 # API contract
 
-Completed analysis observations may include `estimated_fee` and `fee_size_label` on each item. These are backend catalog estimates, never VLM output; final fees remain subject to official reporting confirmation.
+Completed analysis observations may include `estimated_fee`, `estimated_fee_min`, `estimated_fee_max`, and `fee_size_label` on each item. These are backend catalog estimates, never VLM output. When the visible specification does not identify one official fee, `estimated_fee` is null and the min/max fields expose the matching official fee range; final fees remain subject to official reporting confirmation.
 
 계약 원본은 `shared/api/openapi.yaml`, `shared/schemas/**`임.
 

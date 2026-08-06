@@ -28,6 +28,21 @@ Browser
                            └─ OpenAI Responses API
 ```
 
+### Vercel과 Supabase의 역할
+
+| 구분 | Vercel | Supabase |
+| --- | --- | --- |
+| 핵심 역할 | 사용자 화면과 공개 API의 진입점 | 인증, 파일, 데이터와 백그라운드 분석 처리 |
+| 실행 대상 | Next.js 페이지, 정적 자산, Route Handler | Auth, Storage, Postgres, Edge Function |
+| 인증 | 전달받은 Supabase access token을 API에서 검증 | 회원 계정, 로그인 세션과 access token 발급 |
+| 사진 | 업로드 토큰 발급 요청을 중계 | 비공개 Storage에 원본 사진 저장 |
+| 분석 요청 | 분석 작업 생성·조회 API 제공, 결과 polling 응답 | 작업 상태 저장 후 `pg_net`으로 분석 worker 호출 |
+| AI 분석 | 모델을 직접 호출하지 않음 | Edge Function이 OpenAI를 호출하고 결과를 검증·저장 |
+| 운영 데이터 | 영구 데이터를 직접 보관하지 않음 | 분석 기록, 사용량, 수수료 기준, RLS 정책 관리 |
+| 비밀 값 | Supabase 서버 접근에 필요한 service role key만 서버 환경 변수로 사용 | OpenAI key와 worker secret을 Edge Function secret/Vault로 관리 |
+
+간단히 말하면 **Vercel은 서비스의 화면과 API 게이트웨이**, **Supabase는 서비스의 백엔드와 데이터 저장소**입니다. OpenAI API는 Supabase Edge Function에서만 호출합니다.
+
 분석은 비동기로 처리합니다.
 
 1. 브라우저가 Vercel API에서 일회용 업로드 토큰을 발급받습니다.

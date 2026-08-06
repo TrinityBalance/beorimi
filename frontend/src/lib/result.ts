@@ -45,7 +45,7 @@ export function getResultSummary(result: WasteAnalysisResult) {
           100,
       )
     : 0;
-  const estimatedTotal = getEstimatedFeeTotal(selected);
+  const estimatedTotal = getEstimatedFeeRangeTotal(selected);
 
   return {
     title: first
@@ -54,22 +54,51 @@ export function getResultSummary(result: WasteAnalysisResult) {
     confidence: average,
     description: estimatedTotal === null
       ? `${selected.length}개 품목 · 수수료 공식 확인 필요`
-      : `${selected.length}개 품목 · ${result.demo ? "데모 예상 " : "예상 "}${estimatedTotal.toLocaleString("ko-KR")}원`,
+      : `${selected.length}개 품목 · ${result.demo ? "데모 예상 " : "예상 "}${formatEstimatedFeeRange(estimatedTotal)}`,
     status: "AI 다중 품목 판독",
   };
 }
 
-export function getEstimatedFeeTotal(items: DetectedWasteItem[]) {
-  if (items.length === 0 || items.some((item) => item.estimatedFee === undefined)) {
-    return null;
-  }
+export type EstimatedFeeRange = {
+  min: number;
+  max: number;
+};
 
-  return items.reduce(
-    (total, item) => total + getItemEstimatedFee(item),
-    0,
-  );
+export function getItemEstimatedFeeRange(
+  item: DetectedWasteItem,
+): EstimatedFeeRange | null {
+  const quantity = Math.max(1, item.quantity ?? 1);
+  if (item.estimatedFee !== undefined) {
+    const total = item.estimatedFee * quantity;
+    return { min: total, max: total };
+  }
+  if (
+    item.estimatedFeeMin === undefined ||
+    item.estimatedFeeMax === undefined
+  ) return null;
+  return {
+    min: item.estimatedFeeMin * quantity,
+    max: item.estimatedFeeMax * quantity,
+  };
 }
 
-export function getItemEstimatedFee(item: DetectedWasteItem) {
-  return (item.estimatedFee ?? 0) * Math.max(1, item.quantity ?? 1);
+export function getEstimatedFeeRangeTotal(
+  items: DetectedWasteItem[],
+): EstimatedFeeRange | null {
+  if (items.length === 0) return null;
+  let min = 0;
+  let max = 0;
+  for (const item of items) {
+    const range = getItemEstimatedFeeRange(item);
+    if (!range) return null;
+    min += range.min;
+    max += range.max;
+  }
+  return { min, max };
+}
+
+export function formatEstimatedFeeRange(range: EstimatedFeeRange) {
+  return range.min === range.max
+    ? `${range.min.toLocaleString("ko-KR")}원`
+    : `${range.min.toLocaleString("ko-KR")}~${range.max.toLocaleString("ko-KR")}원`;
 }

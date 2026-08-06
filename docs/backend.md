@@ -28,7 +28,7 @@ GET /api/analyses/{id} → Postgres polling
 
 공공데이터 CSV와 조례 XLSX의 146행은 금액이 모두 일치했고, 최신 포털 목록에는 무상수거 및 신규 생활용품을 포함한 67행이 추가되어 있음. 운영 worker는 최신 213행을 기준으로 조회함.
 
-같은 품목에 규격별 금액이 여러 개 있을 때 사진 관찰만으로 규격이 하나로 확정되지 않으면 `estimated_fee`를 `null`로 둠. `longest_side_cm`은 공식 규격이 명시적으로 “가장 긴 면”을 기준으로 하는 경우에만 자동 구간 매칭에 사용함.
+같은 품목에 규격별 금액이 여러 개 있을 때 사진 관찰만으로 규격이 하나로 확정되지 않으면 `estimated_fee`는 `null`로 두고, `estimated_fee_min`과 `estimated_fee_max`로 공식 금액 범위를 제공함. `longest_side_cm`은 공식 규격이 명시적으로 “가장 긴 면”을 기준으로 하는 경우에만 자동 구간 매칭에 사용함.
 
 ## 배포
 

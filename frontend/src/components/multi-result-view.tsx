@@ -6,8 +6,9 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { DEMO_WASTE_CATALOG } from "@/lib/demo-waste-catalog";
 import {
-  getEstimatedFeeTotal,
-  getItemEstimatedFee,
+  formatEstimatedFeeRange,
+  getEstimatedFeeRangeTotal,
+  getItemEstimatedFeeRange,
   getSelectedItems,
 } from "@/lib/result";
 import type {
@@ -38,7 +39,7 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
   );
   const allSelected = reportableItems.length > 0 &&
     selectedItems.length === reportableItems.length;
-  const estimatedTotal = getEstimatedFeeTotal(selectedItems);
+  const estimatedTotal = getEstimatedFeeRangeTotal(selectedItems);
   const catalog = result.demo
     ? result.catalog?.length
       ? result.catalog
@@ -110,9 +111,10 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
         .map((item, index) => {
           const quantity = Math.max(1, item.quantity ?? 1);
           const size = item.size ? ` · ${item.size}` : "";
-          const fee = item.estimatedFee === undefined
-            ? ""
-            : ` · ${getItemEstimatedFee(item).toLocaleString("ko-KR")}원`;
+          const feeRange = getItemEstimatedFeeRange(item);
+          const fee = feeRange
+            ? ` · ${formatEstimatedFeeRange(feeRange)}`
+            : "";
           return `${index + 1}. ${item.label}${size} · ${quantity}개${fee}`;
         })
         .join("\n");
@@ -167,7 +169,11 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
       size: correctedSize || undefined,
       quantity: Math.max(1, draftQuantity),
       estimatedFee: sizeOption?.fee ?? (preserveOfficialFee ? item.estimatedFee : undefined),
+      estimatedFeeMin: sizeOption?.fee ?? (preserveOfficialFee ? item.estimatedFeeMin : undefined),
+      estimatedFeeMax: sizeOption?.fee ?? (preserveOfficialFee ? item.estimatedFeeMax : undefined),
       estimated_fee: sizeOption?.fee ?? (preserveOfficialFee ? item.estimated_fee : null),
+      estimated_fee_min: sizeOption?.fee ?? (preserveOfficialFee ? item.estimated_fee_min : null),
+      estimated_fee_max: sizeOption?.fee ?? (preserveOfficialFee ? item.estimated_fee_max : null),
       fee_size_label: correctedSize || null,
       selected: labelChanged && item.bulky_waste_status === "not_eligible"
         ? true
@@ -267,6 +273,10 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
               item.needs_user_confirmation && !item.userConfirmed;
             const quantity = Math.max(1, item.quantity ?? 1);
             const isNotEligible = item.bulky_waste_status === "not_eligible";
+            const feeRange = getItemEstimatedFeeRange(item);
+            const unitFeeRange = quantity > 1
+              ? getItemEstimatedFeeRange({ ...item, quantity: 1 })
+              : null;
 
             return (
               <article
@@ -305,13 +315,16 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
                     <button type="button" onClick={() => openCorrection(item)}>수정</button>
                     <strong>{confidence}%</strong>
                   </div>
-                  {!isNotEligible && item.estimatedFee !== undefined && (
+                  {!isNotEligible && feeRange && (
                     <div className="multi-item-card__fee">
                       <span>
-                        {result.demo ? "데모 예상 수수료" : "예상 수수료"}
-                        {quantity > 1 ? ` · ${item.estimatedFee.toLocaleString("ko-KR")}원 × ${quantity}` : ""}
+                        {result.demo ? "데모 " : ""}
+                        {feeRange.min === feeRange.max ? "예상 수수료" : "규격별 예상 수수료"}
+                        {quantity > 1 && unitFeeRange
+                          ? ` · 개당 ${formatEstimatedFeeRange(unitFeeRange)} × ${quantity}`
+                          : ""}
                       </span>
-                      <strong>{getItemEstimatedFee(item).toLocaleString("ko-KR")}원</strong>
+                      <strong>{formatEstimatedFeeRange(feeRange)}</strong>
                     </div>
                   )}
                   <div className="multi-confidence-track" aria-label={`AI 신뢰도 ${confidence}%`}>
@@ -365,6 +378,7 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
             {selectedItems.map((item) => {
               const originalIndex = result.items.findIndex((candidate) => candidate.id === item.id);
               const quantity = Math.max(1, item.quantity ?? 1);
+              const feeRange = getItemEstimatedFeeRange(item);
 
               return (
                 <li
@@ -380,14 +394,14 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
                       <small>{[item.size, quantity > 1 ? `${quantity}개` : "1개"].filter(Boolean).join(" · ")}</small>
                     </span>
                   </span>
-                  <strong>{getItemEstimatedFee(item).toLocaleString("ko-KR")}원</strong>
+                  <strong>{feeRange ? formatEstimatedFeeRange(feeRange) : "공식 확인 필요"}</strong>
                 </li>
               );
             })}
           </ul>
           <div className="multi-fee-summary__total">
             <span>예상 합계</span>
-            <strong>{estimatedTotal.toLocaleString("ko-KR")}<small>원</small></strong>
+            <strong>{formatEstimatedFeeRange(estimatedTotal)}</strong>
           </div>
           <p>
             {result.demo ? "데모 금액은 화면 테스트용이며, " : ""}

@@ -17,6 +17,8 @@ export type FeeCatalogMatch = {
   matched: boolean;
   itemName: string | null;
   fee: number | null;
+  feeMin: number | null;
+  feeMax: number | null;
   sizeLabel: string | null;
 };
 
@@ -75,14 +77,28 @@ export function findFeeCatalogMatch(
     ? normalizeItemName(item.label)
     : "";
   if (!name) {
-    return { matched: false, itemName: null, fee: null, sizeLabel: null };
+    return {
+      matched: false,
+      itemName: null,
+      fee: null,
+      feeMin: null,
+      feeMax: null,
+      sizeLabel: null,
+    };
   }
 
   const scored = rules
     .map((rule) => ({ rule, score: matchingAliasLength(name, rule.aliases) }))
     .filter(({ score }) => score > 0);
   if (scored.length === 0) {
-    return { matched: false, itemName: null, fee: null, sizeLabel: null };
+    return {
+      matched: false,
+      itemName: null,
+      fee: null,
+      feeMin: null,
+      feeMax: null,
+      sizeLabel: null,
+    };
   }
 
   const bestScore = Math.max(...scored.map(({ score }) => score));
@@ -91,23 +107,28 @@ export function findFeeCatalogMatch(
     .map(({ rule }) => rule);
   const itemName = candidates[0]?.item_name ?? null;
 
-  // AIDEV-NOTE: Official rows often share an item name but differ by capacity, material, or form.
-  // Never pick an arbitrary fee when the image observation does not uniquely establish that specification.
+  // AIDEV-NOTE: Official rows often share a name but differ by specification; keep the single fee null
+  // when ambiguous and expose the official min/max range instead of selecting an arbitrary row.
   const resolved = resolveUniqueRule(item, candidates);
   if (resolved) {
     return {
       matched: true,
       itemName: resolved.item_name,
       fee: resolved.fee,
+      feeMin: resolved.fee,
+      feeMax: resolved.fee,
       sizeLabel: resolved.size_label,
     };
   }
 
   const distinctFees = new Set(candidates.map((rule) => rule.fee));
+  const fees = [...distinctFees];
   return {
     matched: true,
     itemName,
-    fee: distinctFees.size === 1 ? candidates[0].fee : null,
+    fee: fees.length === 1 ? fees[0] : null,
+    feeMin: Math.min(...fees),
+    feeMax: Math.max(...fees),
     sizeLabel: null,
   };
 }

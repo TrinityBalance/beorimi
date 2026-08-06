@@ -191,12 +191,14 @@ async function enrichObservation(
       const disposal = classifyDisposal(
         rawItem,
         match.matched,
-        match.fee === 0,
+        match.feeMin === 0 && match.feeMax === 0,
       );
       return {
         ...rawItem,
         label: match.itemName ?? rawItem.label,
         estimated_fee: match.fee,
+        estimated_fee_min: match.feeMin,
+        estimated_fee_max: match.feeMax,
         fee_size_label: match.sizeLabel,
         ...disposal,
       };

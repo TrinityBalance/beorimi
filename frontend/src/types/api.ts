@@ -44,6 +44,8 @@ export type BackendAnalysisItem = {
   confirm_question: string | null;
   bbox: BoundingBox | null;
   estimated_fee?: number | null;
+  estimated_fee_min?: number | null;
+  estimated_fee_max?: number | null;
   fee_size_label?: string | null;
   bulky_waste_status?: "eligible" | "not_eligible" | "needs_confirmation";
   disposal_notice?: string | null;

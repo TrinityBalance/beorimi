@@ -92,6 +92,16 @@
             "minimum": 0,
             "description": "Backend catalog-based estimated collection fee; the VLM never sets this value."
           },
+          "estimated_fee_min": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "Lowest official catalog fee among matching specifications; the VLM never sets this value."
+          },
+          "estimated_fee_max": {
+            "type": ["integer", "null"],
+            "minimum": 0,
+            "description": "Highest official catalog fee among matching specifications; the VLM never sets this value."
+          },
           "fee_size_label": {
             "type": ["string", "null"],
             "description": "Catalog size category used for the fee estimate."
