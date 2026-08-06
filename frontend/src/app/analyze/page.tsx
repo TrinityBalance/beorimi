@@ -132,6 +132,11 @@ export default function AnalyzePage() {
     };
   }, [runAnalysis]);
 
+  function cancelAnalysis() {
+    abortRef.current?.abort();
+    router.replace("/capture");
+  }
+
   return (
     <main className="page analyze-page">
       <header className="analyze-header">
@@ -139,7 +144,20 @@ export default function AnalyzePage() {
           <span className="brand-mark" aria-hidden="true"><span /></span>
           <span>버리미</span>
         </span>
-        <span className="secure-chip"><span aria-hidden="true">●</span> 안전하게 분석 중</span>
+        <div className="analyze-header__actions">
+          <span className="secure-chip"><span aria-hidden="true">●</span> 안전하게 분석 중</span>
+          {!error && (
+            <button
+              className="analysis-cancel-button"
+              type="button"
+              onClick={cancelAnalysis}
+              aria-label="분석을 취소하고 사진 확인 화면으로 돌아가기"
+            >
+              <span aria-hidden="true">×</span>
+              분석 취소
+            </button>
+          )}
+        </div>
       </header>
 
       <section className="analyze-copy">

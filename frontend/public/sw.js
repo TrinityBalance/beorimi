@@ -1,4 +1,4 @@
-const CACHE_NAME = "beorimi-shell-v1";
+const CACHE_NAME = "beorimi-shell-v2";
 const APP_SHELL = ["/", "/capture", "/history", "/help", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {

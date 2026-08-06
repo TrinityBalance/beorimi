@@ -1257,6 +1257,11 @@ summary:focus-visible {
 .analyze-header {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
+.analyze-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .secure-chip {
   border-color: rgba(255, 255, 255, 0.13);
   background: rgba(255, 255, 255, 0.06);
@@ -1265,6 +1270,45 @@ summary:focus-visible {
 .secure-chip span {
   color: var(--lime);
   font-size: 7px;
+}
+.analysis-cancel-button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f1f3ed;
+  font-size: 11px;
+  font-weight: 750;
+  backdrop-filter: blur(12px);
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+.analysis-cancel-button span {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(223, 255, 63, 0.12);
+  color: var(--lime);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+}
+.analysis-cancel-button:hover {
+  border-color: rgba(223, 255, 63, 0.42);
+  background: rgba(223, 255, 63, 0.09);
+  color: var(--lime);
+}
+.analysis-cancel-button:active {
+  transform: scale(0.97);
+}
+.analysis-cancel-button:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 3px;
 }
 .analyze-copy {
   padding: 36px 25px 18px;
@@ -4274,6 +4318,9 @@ summary:focus-visible {
   }
 }
 @media (max-width: 365px) {
+  .analyze-header .secure-chip {
+    display: none;
+  }
   .home-hero,
   .recent-section,
   .capture-intro,
