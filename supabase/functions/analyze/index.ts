@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { classifyDisposal, normalizeItemName } from "./disposal.ts";
+import { classifyDisposal } from "./disposal.ts";
+import { type FeeCatalogRule, findFeeCatalogMatch } from "./fee-catalog.ts";
 
 const suspiciousPhrases = [
   "ignore previous",
@@ -172,50 +173,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-type FeeCatalogRule = {
-  rule_key: string;
-  item_name: string;
-  aliases: string[];
-  category: string;
-  fee: number | null;
-  size_label: string | null;
-  min_longest_side_cm: number | null;
-  max_longest_side_cm: number | null;
-};
-
-function findFeeRule(item: Record<string, unknown>, rules: FeeCatalogRule[]) {
-  const name = typeof item.label === "string" ? normalizeItemName(item.label) : "";
-  const category = typeof item.category === "string" ? item.category : "";
-  const longestSide = typeof item.longest_side_cm === "number"
-    ? item.longest_side_cm
-    : null;
-  return rules
-    .filter((rule) => rule.category === category)
-    .filter((rule) => rule.aliases.some((alias) => {
-      const normalizedAlias = normalizeItemName(alias);
-      return name === normalizedAlias || name.includes(normalizedAlias);
-    }))
-    .filter((rule) => longestSide === null
-      ? rule.min_longest_side_cm === null && rule.max_longest_side_cm === null
-      : (rule.min_longest_side_cm === null || longestSide >= rule.min_longest_side_cm) &&
-        (rule.max_longest_side_cm === null || longestSide <= rule.max_longest_side_cm))
-    .sort((left, right) => {
-      const rangeSpecificity =
-        Number(right.min_longest_side_cm !== null) + Number(right.max_longest_side_cm !== null) -
-        Number(left.min_longest_side_cm !== null) - Number(left.max_longest_side_cm !== null);
-      if (rangeSpecificity) return rangeSpecificity;
-      const aliasLength = Math.max(...right.aliases.map((alias) => alias.length)) -
-        Math.max(...left.aliases.map((alias) => alias.length));
-      return aliasLength || left.rule_key.localeCompare(right.rule_key);
-    })[0];
-}
-
 async function enrichObservation(
   client: ReturnType<typeof admin>,
   observation: Record<string, unknown>,
 ) {
   const { data, error } = await client.from("waste_fee_catalog").select(
-    "rule_key,item_name,aliases,category,fee,size_label,min_longest_side_cm,max_longest_side_cm",
+    "rule_key,item_name,aliases,category,fee,size_label,min_longest_side_cm,max_longest_side_cm,specification,match_kind",
   );
   if (error) throw new Error(`Fee catalog lookup failed: ${error.message}`);
   const rules = (data ?? []) as FeeCatalogRule[];
@@ -224,13 +187,17 @@ async function enrichObservation(
     ...observation,
     items: items.map((rawItem) => {
       if (!isRecord(rawItem)) return rawItem;
-      const rule = findFeeRule(rawItem, rules);
-      const disposal = classifyDisposal(rawItem, Boolean(rule));
+      const match = findFeeCatalogMatch(rawItem, rules);
+      const disposal = classifyDisposal(
+        rawItem,
+        match.matched,
+        match.fee === 0,
+      );
       return {
         ...rawItem,
-        label: rule?.item_name ?? rawItem.label,
-        estimated_fee: rule?.fee ?? null,
-        fee_size_label: rule?.size_label ?? null,
+        label: match.itemName ?? rawItem.label,
+        estimated_fee: match.fee,
+        fee_size_label: match.sizeLabel,
         ...disposal,
       };
     }),
@@ -243,7 +210,10 @@ function outputText(payload: Record<string, unknown>): string | undefined {
   for (const message of payload.output) {
     if (!isRecord(message) || !Array.isArray(message.content)) continue;
     for (const content of message.content) {
-      if (isRecord(content) && content.type === "output_text" && typeof content.text === "string") {
+      if (
+        isRecord(content) && content.type === "output_text" &&
+        typeof content.text === "string"
+      ) {
         return content.text;
       }
     }

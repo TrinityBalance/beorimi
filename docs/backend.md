@@ -22,6 +22,14 @@ GET /api/analyses/{id} → Postgres polling
 
 `ANALYSIS_WORKER_SECRET`은 Edge Function secret과 Supabase Vault의 `beorimi_analysis_worker_secret`가 같아야 함. Vault의 `beorimi_analysis_worker_url`은 해당 Edge Function URL임.
 
+### 강남구 수수료 규정 데이터
+
+`202608060002_official_fee_catalog.sql`은 강남구 자원순환 종합포털에서 2026-08-04 확인한 공식 213개 품목·규격 행을 저장함. `waste_fee_catalog_sources`에는 포털 URL, 조례 근거, 확인일, 원본 해시를 기록하고, `waste_disposal_policies`에는 미등재 품목의 유사 품목·기타 품목 처리 근거를 저장함.
+
+공공데이터 CSV와 조례 XLSX의 146행은 금액이 모두 일치했고, 최신 포털 목록에는 무상수거 및 신규 생활용품을 포함한 67행이 추가되어 있음. 운영 worker는 최신 213행을 기준으로 조회함.
+
+같은 품목에 규격별 금액이 여러 개 있을 때 사진 관찰만으로 규격이 하나로 확정되지 않으면 `estimated_fee`를 `null`로 둠. `longest_side_cm`은 공식 규격이 명시적으로 “가장 긴 면”을 기준으로 하는 경우에만 자동 구간 매칭에 사용함.
+
 ## 배포
 
 ```powershell

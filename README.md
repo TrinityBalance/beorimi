@@ -1,41 +1,92 @@
 # Beorimi
 
-사진 속 대형폐기물 후보를 관찰하고 결과를 확인하는 Next.js 앱임.
+사진 한 장으로 대형폐기물 후보를 찾고, 품목·크기·예상 수수료를 확인한 뒤 공식 배출 신고까지 이어주는 웹 앱입니다.
+
+## 주요 기능
+
+- 사진 속 여러 폐기물 후보 탐지 및 위치 표시
+- 분석 품목, 크기·규격, 수량 직접 수정
+- 강남구 품목 기준 예상 수수료 안내
+- 대형폐기물 대상이 아닌 품목의 분리배출 규정 안내
+- 분석 이력 확인과 공식 배출 신고 페이지 연결
+- Supabase Auth 기반 회원가입, 로그인, 로그아웃, 회원 탈퇴
+- 회원가입 및 사진 업로드 전 개인정보 이용 동의
+
+분석 결과와 예상 수수료는 신고 준비를 위한 참고 정보입니다. 실제 배출 가능 여부와 최종 수수료는 공식 신고 페이지에서 다시 확인해야 합니다.
+
+## 시스템 구조
+
+```text
+Browser
+  └─ Vercel · Next.js
+       ├─ Supabase Auth
+       ├─ Supabase Storage
+       └─ Route Handlers
+            └─ Supabase Postgres
+                 └─ pg_net
+                      └─ Supabase Edge Function
+                           └─ OpenAI Responses API
+```
+
+분석은 비동기로 처리합니다.
+
+1. 브라우저가 Vercel API에서 일회용 업로드 토큰을 발급받습니다.
+2. 사진을 Supabase의 비공개 Storage에 직접 업로드합니다.
+3. `POST /api/analyses`가 분석 작업을 생성하고 `202 queued`를 반환합니다.
+4. Supabase가 Edge Function을 호출해 사진을 분석합니다.
+5. 브라우저가 `GET /api/analyses/{id}`를 polling하여 결과를 받습니다.
+
+원본 이미지와 분석 기록은 기본 30일 동안 보관한 뒤 정리합니다.
 
 ## 저장소 구조
 
-- `frontend/`: Vercel에 배포되는 Next.js 앱과 Route Handler API
-- `supabase/`: Postgres migrations와 비동기 Edge Function worker
-- `shared/`: 운영 API와 분석 결과 계약
-- `vlm/`: 운영과 분리된 로컬 프롬프트·스키마 실험 도구
-- `legacy/aws/`: 철회한 AWS 구현의 보존 아카이브이며 운영 빌드에서 사용하지 않음
+| 경로 | 역할 |
+| --- | --- |
+| `frontend/` | Vercel에 배포되는 Next.js 앱과 Route Handler API |
+| `supabase/` | Postgres migration과 비동기 분석 Edge Function |
+| `shared/` | OpenAPI 및 JSON Schema 공용 계약 |
+| `vlm/` | 운영과 분리된 로컬 프롬프트·스키마 실험 도구 |
+| `legacy/aws/` | 운영에서 제외된 이전 AWS 구현 아카이브 |
 
-## 운영 구조
+## 로컬 실행
 
-```text
-Browser → Vercel (Next.js API) → Supabase Auth / Storage / Postgres
-                                      ↓ insert webhook + pg_net
-                               Supabase Edge Function → OpenAI Responses API
+### 준비 사항
+
+- Node.js 22.13 이상
+- npm
+- 연결할 Supabase 프로젝트
+- Supabase CLI — migration 또는 Edge Function을 변경할 때 필요
+- Python 3 — 로컬 VLM 실험과 테스트를 실행할 때만 필요
+
+### 프론트엔드
+
+```powershell
+Copy-Item frontend/.env.example frontend/.env.local
+npm.cmd --prefix frontend ci
+npm.cmd --prefix frontend run dev
 ```
 
-분석 요청은 항상 비동기임. `POST /api/analyses`가 `202 queued`를 반환하고, 클라이언트는 `GET /api/analyses/{id}`를 polling함.
-
-## 배포
-
-1. Supabase 프로젝트 생성 후 CLI에서 `supabase link`, `supabase db push` 실행.
-2. Supabase Auth의 Site URL과 Redirect URL에 Vercel 운영 URL을 등록. Edge Function `analyze`를 배포하고 `OPENAI_API_KEY`, `OPENAI_VLM_MODEL`, `ANALYSIS_WORKER_SECRET`를 Supabase secrets에 등록.
-3. Supabase Vault에 `beorimi_analysis_worker_url`(Edge Function URL)과 같은 값의 `beorimi_analysis_worker_secret`를 등록.
-4. Vercel 프로젝트의 Root Directory를 `frontend`로 설정하고 다음 공개 환경 변수를 등록.
+`frontend/.env.local`에 다음 값을 설정합니다.
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Supabase publishable key>
-SUPABASE_SERVICE_ROLE_KEY=<server-only service role key>
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
+SUPABASE_SERVICE_ROLE_KEY=<server-only-service-role-key>
 ```
 
-`OPENAI_API_KEY`, `ANALYSIS_WORKER_SECRET`는 브라우저/Vercel 환경 변수에 넣으면 안 됨. Supabase Edge Function에만 둬야 함.
+개발 서버는 기본적으로 `http://localhost:3000`에서 실행됩니다. `SUPABASE_SERVICE_ROLE_KEY`는 서버 전용 값이므로 `NEXT_PUBLIC_` 접두사를 붙이거나 브라우저 코드에서 참조하면 안 됩니다.
 
-단, `SUPABASE_SERVICE_ROLE_KEY`는 Vercel API route가 필요하므로 Vercel의 **비공개** 환경 변수로도 등록함. `NEXT_PUBLIC_` 접두사는 절대 쓰면 안 됨.
+### 로컬 VLM 실험
+
+운영 분석은 Supabase Edge Function에서 실행됩니다. `vlm/`은 프롬프트와 응답 계약을 로컬에서 실험할 때만 사용합니다.
+
+```powershell
+Copy-Item vlm/.env.example vlm/.env
+python -m pip install -r vlm/requirements.txt -r vlm/requirements-dev.txt
+python -m vlm.app.cli <image-path>
+```
+
+`vlm/.env`에는 로컬 실험용 `OPENAI_API_KEY`를 설정해야 합니다.
 
 ## 검증
 
@@ -43,8 +94,53 @@ SUPABASE_SERVICE_ROLE_KEY=<server-only service role key>
 npm.cmd --prefix frontend run lint
 npm.cmd --prefix frontend run build
 python -m pytest vlm/tests
+node --experimental-strip-types --test supabase/functions/analyze/*.test.ts
 ```
 
-로컬 VLM CLI는 관찰 결과 실험용으로 남아 있음. 운영 분석 경로는 Supabase Edge Function임.
+## 배포
 
-이전 FastAPI/Lambda, S3/SQS/DynamoDB, Cognito, CloudFormation, Amplify, App Runner 코드는 `legacy/aws/`에 보존되어 있음.
+### Supabase
+
+1. 프로젝트를 연결하고 migration을 반영합니다.
+
+   ```powershell
+   supabase link --project-ref <project-ref>
+   supabase db push
+   ```
+
+2. `analyze` Edge Function을 배포합니다.
+
+   ```powershell
+   supabase functions deploy analyze
+   ```
+
+3. Edge Function secret에 `OPENAI_API_KEY`, `OPENAI_VLM_MODEL`, `ANALYSIS_WORKER_SECRET`를 등록합니다.
+4. Supabase Vault에 다음 값을 등록합니다.
+   - `beorimi_analysis_worker_url`: 배포한 `analyze` Edge Function URL
+   - `beorimi_analysis_worker_secret`: `ANALYSIS_WORKER_SECRET`과 같은 값
+5. Supabase Auth의 Site URL과 허용 Redirect URL에 Vercel 운영 URL을 등록합니다.
+
+`OPENAI_API_KEY`와 `ANALYSIS_WORKER_SECRET`는 Vercel 또는 브라우저 환경 변수에 등록하지 않습니다.
+
+### Vercel
+
+1. 프로젝트 Root Directory를 `frontend`로 설정합니다.
+2. Build Command는 `npm run build`를 사용합니다.
+3. 다음 환경 변수를 등록합니다.
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` — 서버 전용 비공개 변수
+4. 배포 후 Vercel 운영 URL을 Supabase Auth 설정에 반영합니다.
+
+## 관련 문서
+
+- [시스템 아키텍처](shared/docs/architecture.md)
+- [API 계약 설명](shared/docs/api-contract.md)
+- [OpenAPI 명세](shared/api/openapi.yaml)
+- [프론트엔드 가이드](docs/frontend.md)
+- [백엔드 가이드](docs/backend.md)
+- [VLM 가이드](docs/vlm.md)
+
+## Legacy 안내
+
+이전 FastAPI/Lambda, S3/SQS/DynamoDB, Cognito, CloudFormation, Amplify, App Runner 코드는 `legacy/aws/`에 보존되어 있습니다. 현재 운영 빌드와 배포에는 사용하지 않습니다.

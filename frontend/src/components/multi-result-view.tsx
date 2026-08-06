@@ -39,11 +39,11 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
   const allSelected = reportableItems.length > 0 &&
     selectedItems.length === reportableItems.length;
   const estimatedTotal = getEstimatedFeeTotal(selectedItems);
-  const catalog = result.catalog?.length
-    ? result.catalog
-    : result.demo
-      ? DEMO_WASTE_CATALOG
-      : [];
+  const catalog = result.demo
+    ? result.catalog?.length
+      ? result.catalog
+      : DEMO_WASTE_CATALOG
+    : [];
   const editingItem = result.items.find((item) => item.id === editingItemId);
   const selectedCatalogItem = catalog.find((item) => item.name === draftLabel);
   const selectedSizeOption = selectedCatalogItem?.sizes.find(
@@ -157,6 +157,8 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
     const correctedSize = draftSize.trim();
     const correctedLabel = draftLabel.trim();
     const labelChanged = correctedLabel !== editingItem.label;
+    const sizeChanged = correctedSize !== (editingItem.size ?? "");
+    const preserveOfficialFee = !labelChanged && !sizeChanged;
 
     updateItem(editingItem.id, (item) => ({
       ...item,
@@ -164,8 +166,8 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
       label: correctedLabel,
       size: correctedSize || undefined,
       quantity: Math.max(1, draftQuantity),
-      estimatedFee: sizeOption?.fee,
-      estimated_fee: sizeOption?.fee ?? null,
+      estimatedFee: sizeOption?.fee ?? (preserveOfficialFee ? item.estimatedFee : undefined),
+      estimated_fee: sizeOption?.fee ?? (preserveOfficialFee ? item.estimated_fee : null),
       fee_size_label: correctedSize || null,
       selected: labelChanged && item.bulky_waste_status === "not_eligible"
         ? true
@@ -387,7 +389,10 @@ export function MultiResultView({ result, onChange }: MultiResultViewProps) {
             <span>예상 합계</span>
             <strong>{estimatedTotal.toLocaleString("ko-KR")}<small>원</small></strong>
           </div>
-          <p>데모 금액은 화면 테스트용이며, 최종 수수료는 공식 신고 단계에서 품목과 규격을 확인한 뒤 확정됩니다.</p>
+          <p>
+            {result.demo ? "데모 금액은 화면 테스트용이며, " : ""}
+            최종 수수료는 공식 신고 단계에서 품목과 규격을 확인한 뒤 확정됩니다.
+          </p>
         </section>
       ) : (
         <section className="multi-policy-pending">

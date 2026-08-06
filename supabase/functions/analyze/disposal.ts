@@ -43,12 +43,14 @@ export function normalizeItemName(value: string) {
 export function classifyDisposal(
   item: Record<string, unknown>,
   hasFeeCatalogRule: boolean,
+  catalogIsFree = false,
 ): DisposalClassification {
-  const name = typeof item.label === "string" ? normalizeItemName(item.label) : "";
+  const name = typeof item.label === "string"
+    ? normalizeItemName(item.label)
+    : "";
   const category = typeof item.category === "string" ? item.category : "";
-  const matches = (candidates: string[]) => candidates.some((candidate) =>
-    name.includes(normalizeItemName(candidate))
-  );
+  const matches = (candidates: string[]) =>
+    candidates.some((candidate) => name.includes(normalizeItemName(candidate)));
 
   // AIDEV-NOTE: Only explicit separate-collection matches are rejected; catalog misses need confirmation.
   if (category === "packaging" && matches(recyclablePackagingNames)) {
@@ -68,6 +70,14 @@ export function classifyDisposal(
     };
   }
   if (hasFeeCatalogRule) {
+    if (catalogIsFree) {
+      return {
+        bulky_waste_status: "eligible",
+        disposal_notice:
+          "강남구 공식 목록의 무상수거 품목입니다. 신청 전에 무상수거 조건과 배출 방법을 확인해주세요.",
+        disposal_guidance_url: bulkyWasteGuidanceUrl,
+      };
+    }
     return {
       bulky_waste_status: "eligible",
       disposal_notice: null,

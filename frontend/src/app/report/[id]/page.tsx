@@ -348,21 +348,15 @@ export default function ReportPage() {
           {copied ? "신고 정보를 복사했어요" : "신고 정보 복사하기"}
         </button>
       </div>
-      <div className={`detail-primary-tray ${isReportReady ? "is-ready" : ""}`}>
-        {isReportReady ? (
-          <a
-            className="primary-button"
-            href={OFFICIAL_REPORT_URL}
-            target="_blank"
-            rel="noreferrer"
-          >
-            공식 신고 페이지로 이동 <span aria-hidden="true">↗</span>
-          </a>
-        ) : (
-          <button className="primary-button" type="button" disabled>
-            확인 {2 - checklistCompleted}개 남았어요
-          </button>
-        )}
+      <div className="detail-primary-tray is-ready">
+        <a
+          className="primary-button"
+          href={OFFICIAL_REPORT_URL}
+          target="_blank"
+          rel="noreferrer"
+        >
+          공식 신고 페이지로 이동 <span aria-hidden="true">↗</span>
+        </a>
       </div>
     </main>
   );
