@@ -16,4 +16,4 @@ Completed analysis observations may include `estimated_fee`, `estimated_fee_min`
 4. Supabase trigger가 Edge Function worker를 비동기로 호출함.
 5. 클라이언트는 `GET /api/analyses/{id}`를 terminal 상태까지 polling함.
 
-지원 형식은 JPEG, PNG, WebP이고 최대 10MiB임. job과 원본 이미지는 30일 뒤 정리됨. 계정당 MVP 분석 횟수는 누적 5회임.
+지원 형식은 JPEG, PNG, WebP이고 최대 10MiB임. job과 원본 이미지는 30일 뒤 정리됨. 계정당 MVP 분석 횟수는 누적 30회임.

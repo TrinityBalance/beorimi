@@ -78,7 +78,7 @@ paths:
         "404":
           description: Uploaded image does not exist
         "429":
-          description: Authenticated account has used all five MVP analyses
+          description: Authenticated account has used all 30 MVP analyses
         "503":
           description: Analysis worker is not configured
   /api/account:
