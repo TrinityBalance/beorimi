@@ -23,6 +23,6 @@ Vercel (Next.js)
 | shared | OpenAPI와 JSON Schema 계약 |
 
 - 분석은 `POST /api/analyses` + polling만 사용함.
-- 계정 소유권과 누적 5회 한도는 Supabase user id 기준임.
+- 계정 소유권과 누적 30회 한도는 Supabase user id 기준임.
 - worker가 받은 VLM 결과 중 guardrail을 통과한 `observation`만 공개 job에 저장함.
 - 원본 이미지와 분석 기록은 기본 30일 보관 후 정리함.

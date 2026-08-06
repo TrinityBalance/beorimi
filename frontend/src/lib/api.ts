@@ -81,7 +81,7 @@ function messageForStatus(status: number): string {
   if ([400, 413, 422].includes(status)) return "사진 형식이나 크기를 확인해줘.";
   if ([401, 403].includes(status)) return "로그인이 만료됐어요. 다시 로그인해줘.";
   if (status === 404) return "업로드한 사진이나 분석 요청을 찾지 못했어요.";
-  if (status === 429) return "이 계정의 사진 분석 5회를 모두 사용했어요.";
+  if (status === 429) return "이 계정의 사진 분석 30회를 모두 사용했어요.";
   if (status === 503) return "분석 서비스가 잠시 바빠요. 잠시 뒤 다시 시도해줘.";
   return "분석 요청을 처리하지 못했어요.";
 }
