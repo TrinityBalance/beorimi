@@ -25,10 +25,13 @@ from ..services.upload_service import (
     owner_key_prefix,
     s3_error_code,
 )
-from ..services.vlm_client import VlmClient, VlmResponseError
+from ..services.vlm_client import VlmClient, VlmContractError, VlmResponseError
 
 logger = logging.getLogger(__name__)
 # AIDEV-NOTE: 이미지 자체가 잘못된 경우라 재시도해도 결과가 같다. 나머지 상태 코드는 일시적 장애로 보고 재시도한다.
+#             VlmContractError 도 영구 실패다(배포된 계약 불일치). 재시도로 두면 SQS
+#             VisibilityTimeout(900초) × maxReceiveCount 만큼 processing 이 유지되어
+#             사용자에게는 무한 로딩으로 보인다.
 PERMANENT_VLM_STATUS_CODES = {400, 413, 415}
 
 
@@ -131,6 +134,13 @@ def process_record(
         vlm_result = vlm_client.analyze_result_sync(filename, content, content_type)
     except PermanentAnalysisError as error:
         repository.mark_failed(analysis_id, _now_iso(), str(error))
+        return
+    except VlmContractError as error:
+        repository.mark_failed(
+            analysis_id,
+            _now_iso(),
+            f"VLM contract mismatch: {error.detail}",
+        )
         return
     except VlmResponseError as error:
         if error.status_code not in PERMANENT_VLM_STATUS_CODES:

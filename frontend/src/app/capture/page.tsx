@@ -4,11 +4,18 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { PhotoPicker } from "@/components/photo-picker";
+import { PrivacyConsent } from "@/components/privacy-consent";
 import {
   getPendingPhoto,
   getSelectedRegion,
   saveSelectedRegion,
 } from "@/lib/analysis-store";
+import {
+  AuthRequiredError,
+  getCurrentUser,
+  recordPrivacyConsent,
+} from "@/lib/auth";
+import { hasPrivacyConsent } from "@/lib/privacy-consent";
 import type { PendingPhoto, SelectionRegion } from "@/types/analysis";
 
 type Point = { x: number; y: number };
@@ -20,6 +27,11 @@ export default function CapturePage() {
   const [photo, setPhoto] = useState<PendingPhoto | null | undefined>(undefined);
   const [region, setRegion] = useState<SelectionRegion | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [showPrivacyConsent, setShowPrivacyConsent] = useState(false);
+  const [privacyConsentAccepted, setPrivacyConsentAccepted] = useState(false);
+  const [privacyConsentPending, setPrivacyConsentPending] = useState(false);
+  const [privacyConsentError, setPrivacyConsentError] = useState("");
+  const [startingAnalysis, setStartingAnalysis] = useState(false);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -71,10 +83,46 @@ export default function CapturePage() {
     });
   }
 
-  function startAnalysis() {
-    if (!photo) return;
+  async function startAnalysis() {
+    if (!photo || startingAnalysis) return;
     saveSelectedRegion(region);
-    router.push("/analyze");
+    setStartingAnalysis(true);
+    setPrivacyConsentError("");
+    try {
+      const user = await getCurrentUser();
+      if (!hasPrivacyConsent(user)) {
+        setShowPrivacyConsent(true);
+        return;
+      }
+      router.push("/analyze");
+    } catch (error) {
+      if (error instanceof AuthRequiredError) {
+        router.push("/login?next=/capture");
+        return;
+      }
+      setPrivacyConsentError("계정 정보를 확인하지 못했어요. 다시 시도해주세요.");
+    } finally {
+      setStartingAnalysis(false);
+    }
+  }
+
+  async function acceptPrivacyConsent() {
+    if (!privacyConsentAccepted || privacyConsentPending) return;
+    setPrivacyConsentPending(true);
+    setPrivacyConsentError("");
+    try {
+      await recordPrivacyConsent();
+      setShowPrivacyConsent(false);
+      router.push("/analyze");
+    } catch (error) {
+      if (error instanceof AuthRequiredError) {
+        router.push("/login?next=/capture");
+        return;
+      }
+      setPrivacyConsentError("동의 정보를 저장하지 못했어요. 다시 시도해주세요.");
+    } finally {
+      setPrivacyConsentPending(false);
+    }
   }
 
   if (photo === undefined) {
@@ -183,11 +231,39 @@ export default function CapturePage() {
       </aside>
 
       <div className="sticky-cta">
-        <button className="primary-button" type="button" onClick={startAnalysis}>
-          {region ? "선택한 물건 판별하기" : "사진 속 물건 모두 판별하기"}
+        <button className="primary-button" type="button" disabled={startingAnalysis} onClick={() => void startAnalysis()}>
+          {startingAnalysis ? "계정 확인 중..." : region ? "선택한 물건 판별하기" : "사진 속 물건 모두 판별하기"}
           <span aria-hidden="true">→</span>
         </button>
       </div>
+
+      {showPrivacyConsent && (
+        <>
+          <button
+            className="privacy-consent-backdrop"
+            type="button"
+            aria-label="동의 창 닫기"
+            onClick={() => setShowPrivacyConsent(false)}
+          />
+          <section className="privacy-consent-modal" role="dialog" aria-modal="true" aria-labelledby="upload-consent-title">
+            <span className="privacy-consent-modal__badge">최초 1회</span>
+            <h2 id="upload-consent-title">사진 분석 전 동의가 필요해요</h2>
+            <p>동의 기록이 없는 계정에만 한 번 안내해드려요.</p>
+            <PrivacyConsent
+              inputId="upload-privacy-consent"
+              checked={privacyConsentAccepted}
+              onChange={setPrivacyConsentAccepted}
+            />
+            {privacyConsentError && <p className="form-error" role="alert">{privacyConsentError}</p>}
+            <div className="privacy-consent-modal__actions">
+              <button className="secondary-button" type="button" onClick={() => setShowPrivacyConsent(false)}>취소</button>
+              <button className="primary-button" type="button" disabled={!privacyConsentAccepted || privacyConsentPending} onClick={() => void acceptPrivacyConsent()}>
+                {privacyConsentPending ? "저장 중..." : "동의하고 분석 시작"}
+              </button>
+            </div>
+          </section>
+        </>
+      )}
     </main>
   );
 }

@@ -15,7 +15,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 Run all lookup and verification commands from the repository root.
 
 1. Choose one primary role: Frontend, Backend, or VLM.
-2. Read only that role's compact card: `frontend/AGENTS.md`, `backend/AGENTS.md`, or `vlm/AGENTS.md`.
+2. Read only that role's compact card: `frontend/AGENTS.md`, `supabase/AGENTS.md`, or `vlm/AGENTS.md`.
 3. Run the card's `rg` command to fetch active requests addressed to the role. If it returns no match, do not read `docs/cowork_ground.md` in full.
 4. List the detailed guide headings with `rg -n "^##|^###" docs/<role>.md`, then read only sections relevant to the task. Read the full guide only for onboarding or a broad role-wide refactor.
 5. Do not read the root `README.md` for routine implementation work; it is the human-facing overview.
@@ -28,6 +28,7 @@ Run all lookup and verification commands from the repository root.
 - Contract changes proceed in this order: shared contract → providing service → consuming service.
 - Analysis is asynchronous. `POST /api/analyses` only enqueues and returns `202` with status `queued`; results arrive through polling `GET /api/analyses/{id}`. Do not add a synchronous analysis path to the public API.
 - `supabase/**` belongs to Backend. Database migrations, Edge Function secrets, worker payloads, and `frontend/src/lib/server/supabase.ts` must change together.
+- `legacy/aws/**` is a read-only reference for the retired deployment. Do not restore it to an active build or deployment path without an explicit architecture decision.
 - Protected routes validate Supabase JWTs. Verify the full authenticated flow against a Supabase deployment, not a mocked token.
 - Cross-role edits require every affected role card and its verification, but not every detailed guide in full.
 - Keep role details in `docs/<role>.md`; change the root README only for project-wide workflow or architecture changes.

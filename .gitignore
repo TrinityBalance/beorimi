@@ -44,8 +44,8 @@ vlm_overlays/
 !/vlm/data/photos/README.md
 /vlm/models/*
 !/vlm/models/.gitkeep
-/backend/app/data/*
-!/backend/app/data/README.md
+/legacy/aws/backend/app/data/*
+!/legacy/aws/backend/app/data/README.md
 
 # Python artifacts
 __pycache__/

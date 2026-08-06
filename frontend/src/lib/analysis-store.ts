@@ -57,6 +57,12 @@ export function clearHistory() {
   localStorage.removeItem(HISTORY_KEY);
 }
 
+export function clearAllAnalysisData() {
+  sessionStorage.removeItem(PHOTO_KEY);
+  sessionStorage.removeItem(REGION_KEY);
+  localStorage.removeItem(HISTORY_KEY);
+}
+
 function readJson<T>(value: string | null): T | null {
   if (!value) return null;
 

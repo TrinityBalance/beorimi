@@ -55,6 +55,9 @@ class OpenAIVisionProviderTests(unittest.TestCase):
         assert request is not None
         self.assertEqual(request["model"], "test-model")
         self.assertFalse(request["store"])
+        user_prompt = request["input"][1]["content"][0]["text"]
+        self.assertIn("0~1000", user_prompt)
+        self.assertIn("보이는 픽셀", user_prompt)
         self.assertEqual(request["input"][1]["content"][1]["detail"], "original")
         self.assertTrue(request["text"]["format"]["strict"])
 

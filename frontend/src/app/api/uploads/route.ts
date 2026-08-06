@@ -1,8 +1,9 @@
-import { errorResponse, imageKey, parseUploadPayload, requireUser, serviceClient, storageBucket } from "@/lib/server/supabase";
+import { errorResponse, imageKey, parseUploadPayload, requirePrivacyConsent, requireUser, serviceClient, storageBucket } from "@/lib/server/supabase";
 
 export async function POST(request: Request) {
   try {
     const user = await requireUser(request);
+    requirePrivacyConsent(user);
     const payload = parseUploadPayload(await request.json());
     const key = imageKey(user.id, payload.contentType);
     const { data, error } = await serviceClient().storage.from(storageBucket()).createSignedUploadUrl(key);

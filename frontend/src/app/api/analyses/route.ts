@@ -1,8 +1,9 @@
-import { errorResponse, objectExists, parseImageKey, requireUser, serviceClient } from "@/lib/server/supabase";
+import { errorResponse, objectExists, parseImageKey, requirePrivacyConsent, requireUser, serviceClient } from "@/lib/server/supabase";
 
 export async function POST(request: Request) {
   try {
     const user = await requireUser(request);
+    requirePrivacyConsent(user);
     const imageKey = parseImageKey(await request.json(), user.id);
     if (!await objectExists(imageKey)) return Response.json({ detail: "Uploaded image was not found" }, { status: 404 });
     const { data, error } = await serviceClient().rpc("create_analysis_job", { p_owner: user.id, p_image_key: imageKey });

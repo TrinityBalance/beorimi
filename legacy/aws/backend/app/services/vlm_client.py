@@ -34,6 +34,15 @@ class VlmResponseError(VlmServiceError):
         self.detail = detail
 
 
+class VlmContractError(VlmResponseError):
+    """VLM 응답이 내부 계약을 만족하지 않는다.
+
+    AIDEV-NOTE: 상태 코드는 502 로 유지하되 예외 타입으로 구분한다. 상류 VLM 이
+                돌려주는 502(ProviderResponseError)는 일시 장애라 재시도 대상이고,
+                이 예외는 배포된 계약이 어긋난 것이라 재시도해도 같은 결과다.
+    """
+
+
 class VlmClient:
     def __init__(
         self,
@@ -70,11 +79,11 @@ class VlmClient:
         try:
             payload = response.json()
         except ValueError as error:
-            raise VlmResponseError(502, "VLM returned invalid JSON") from error
+            raise VlmContractError(502, "VLM returned invalid JSON") from error
         try:
             return VlmAnalysisResult.model_validate(payload).model_dump(mode="json")
         except ValidationError as error:
-            raise VlmResponseError(
+            raise VlmContractError(
                 502,
                 "VLM returned a response that does not match the internal contract",
             ) from error

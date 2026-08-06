@@ -2,6 +2,14 @@
 
 사진 속 대형폐기물 후보를 관찰하고 결과를 확인하는 Next.js 앱임.
 
+## 저장소 구조
+
+- `frontend/`: Vercel에 배포되는 Next.js 앱과 Route Handler API
+- `supabase/`: Postgres migrations와 비동기 Edge Function worker
+- `shared/`: 운영 API와 분석 결과 계약
+- `vlm/`: 운영과 분리된 로컬 프롬프트·스키마 실험 도구
+- `legacy/aws/`: 철회한 AWS 구현의 보존 아카이브이며 운영 빌드에서 사용하지 않음
+
 ## 운영 구조
 
 ```text
@@ -22,7 +30,7 @@ Browser → Vercel (Next.js API) → Supabase Auth / Storage / Postgres
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<Supabase publishable key>
-NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=waste-images
+SUPABASE_SERVICE_ROLE_KEY=<server-only service role key>
 ```
 
 `OPENAI_API_KEY`, `ANALYSIS_WORKER_SECRET`는 브라우저/Vercel 환경 변수에 넣으면 안 됨. Supabase Edge Function에만 둬야 함.
@@ -38,3 +46,5 @@ python -m pytest vlm/tests
 ```
 
 로컬 VLM CLI는 관찰 결과 실험용으로 남아 있음. 운영 분석 경로는 Supabase Edge Function임.
+
+이전 FastAPI/Lambda, S3/SQS/DynamoDB, Cognito, CloudFormation, Amplify, App Runner 코드는 `legacy/aws/`에 보존되어 있음.

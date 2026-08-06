@@ -9,10 +9,10 @@
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<publishable-key>
-NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=waste-images
+SUPABASE_SERVICE_ROLE_KEY=<server-only-service-role-key>
 ```
 
-`NEXT_PUBLIC_*`에는 공개값만 둠. service role key, OpenAI key, worker secret은 절대 넣지 않음.
+`NEXT_PUBLIC_*`에는 공개값만 둠. `SUPABASE_SERVICE_ROLE_KEY`는 Vercel Route Handler에서만 읽으며 브라우저 코드에서 참조하지 않음. OpenAI key와 worker secret은 Vercel이 아니라 Supabase Edge Function secret으로 관리함.
 
 ## 배포·검증
 

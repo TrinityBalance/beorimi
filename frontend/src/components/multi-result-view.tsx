@@ -568,7 +568,12 @@ function toPercent(confidence: number) {
 }
 
 function getBoxStyle(bbox: BoundingBox, color: string, index: number): CSSProperties {
-  const [left, top, right, bottom] = bbox;
+  const [rawLeft, rawTop, rawRight, rawBottom] = bbox;
+  const left = clampCoordinate(Math.min(rawLeft, rawRight));
+  const top = clampCoordinate(Math.min(rawTop, rawBottom));
+  const right = clampCoordinate(Math.max(rawLeft, rawRight));
+  const bottom = clampCoordinate(Math.max(rawTop, rawBottom));
+
   return {
     "--box-color": color,
     "--item-order": index,
@@ -577,4 +582,8 @@ function getBoxStyle(bbox: BoundingBox, color: string, index: number): CSSProper
     width: `${Math.max(0, right - left) / 10}%`,
     height: `${Math.max(0, bottom - top) / 10}%`,
   } as CSSProperties;
+}
+
+function clampCoordinate(coordinate: number) {
+  return Math.max(0, Math.min(1000, coordinate));
 }

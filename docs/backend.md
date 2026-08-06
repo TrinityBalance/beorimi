@@ -4,6 +4,8 @@
 
 공개 API는 `frontend/src/app/api/**`의 Vercel Route Handler가 담당함. Supabase가 Auth, Storage, Postgres와 비동기 worker 실행을 담당함.
 
+이전 FastAPI/AWS 구현은 `legacy/aws/`에 보존되어 있으며 운영 코드나 배포 절차에서 참조하지 않음.
+
 ```text
 POST /api/uploads → signed upload token → private Storage upload
 POST /api/analyses → Postgres queued row → pg_net webhook → Edge Function

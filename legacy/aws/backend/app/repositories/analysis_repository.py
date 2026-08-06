@@ -13,6 +13,16 @@ from botocore.exceptions import ClientError
 QUOTA_ITEM_PREFIX = "analysis-quota#"
 
 
+def _decode_dynamodb_numbers(value: Any) -> Any:
+    if isinstance(value, Decimal):
+        return int(value) if value == value.to_integral_value() else float(value)
+    if isinstance(value, dict):
+        return {key: _decode_dynamodb_numbers(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_decode_dynamodb_numbers(item) for item in value]
+    return value
+
+
 class AnalysisQuotaLimitReachedError(RuntimeError):
     pass
 
@@ -37,20 +47,28 @@ class AnalysisRepository:
             Key={"id": analysis_id},
             ConsistentRead=True,
         )
-        return response.get("Item")
+        item = response.get("Item")
+        if item is None:
+            return None
+        # AIDEV-NOTE: boto3 returns every DynamoDB number as Decimal, while the public
+        #             response contract uses strict JSON ints/floats. Decode at the storage boundary.
+        return _decode_dynamodb_numbers(item)
 
     def reserve_quota(self, owner: str, limit: int) -> None:
+        # AIDEV-NOTE: owner is a DynamoDB reserved word and must stay behind #owner
+        #             anywhere it appears in an expression.
         try:
             self._table.update_item(
                 Key={"id": f"{QUOTA_ITEM_PREFIX}{owner}"},
                 UpdateExpression=(
                     "SET record_type = if_not_exists(record_type, :record_type), "
-                    "owner = if_not_exists(owner, :owner) "
+                    "#owner = if_not_exists(#owner, :owner) "
                     "ADD analysis_count :one"
                 ),
                 ConditionExpression=(
                     "attribute_not_exists(analysis_count) OR analysis_count < :limit"
                 ),
+                ExpressionAttributeNames={"#owner": "owner"},
                 ExpressionAttributeValues={
                     ":record_type": "analysis_quota",
                     ":owner": owner,

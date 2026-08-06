@@ -10,6 +10,8 @@ const suspiciousPhrases = [
 ];
 const failedGuardrailMessage =
   "Image contains instruction-like text and cannot be safely analyzed";
+// AIDEV-NOTE: Keep this value aligned with the Storage migration and frontend/src/lib/supabase-config.ts.
+const storageBucket = "waste-images";
 
 const observationSchema = {
   type: "object",
@@ -97,6 +99,8 @@ const observationSchema = {
           confirm_question: { type: ["string", "null"] },
           bbox: {
             type: ["array", "null"],
+            description:
+              "Tight bounds of only this item's visible pixels as [left, top, right, bottom], normalized against the full submitted image from 0 to 1000.",
             items: { type: "integer", minimum: 0, maximum: 1000 },
             minItems: 4,
             maxItems: 4,
@@ -272,7 +276,7 @@ async function observeImage(signedUrl: string) {
           content: [{
             type: "input_text",
             text:
-              "Return only the requested JSON observation for visible household waste or bulky items. Use uncertainty fields when visual evidence is insufficient.",
+              "Return only the requested JSON observation for visible household waste or bulky items. Use uncertainty fields when visual evidence is insufficient. For every bbox, use the full submitted image as the 0..1000 coordinate frame, tightly enclose only that item's visible pixels, exclude shadows, background, and other items, and verify left < right and top < bottom before returning it. Use null only when the item's location cannot be determined.",
           }, { type: "input_image", image_url: signedUrl, detail: "original" }],
         },
       ],
@@ -335,7 +339,7 @@ async function processJob(id: string) {
   );
   try {
     const { data: signed, error: signedError } = await client.storage.from(
-      Deno.env.get("SUPABASE_STORAGE_BUCKET") || "waste-images",
+      storageBucket,
     ).createSignedUrl(String(claimed.image_key), 120);
     if (signedError || !signed?.signedUrl) {
       throw new Error(signedError?.message ?? "Source image was not found");
@@ -387,9 +391,7 @@ async function cleanup() {
     .lt("expires_at", new Date().toISOString()).limit(100);
   if (error) throw new Error(error.message);
   for (const job of data) {
-    await client.storage.from(
-      Deno.env.get("SUPABASE_STORAGE_BUCKET") || "waste-images",
-    ).remove([String(job.image_key)]);
+    await client.storage.from(storageBucket).remove([String(job.image_key)]);
     await client.from("analyses").delete().eq("id", job.id);
   }
 }

@@ -161,7 +161,12 @@
           },
           "size_basis": {
             "type": "string",
-            "enum": ["reference_object", "visible_label", "unknown"]
+            "enum": [
+              "reference_object",
+              "visible_label",
+              "typical_product",
+              "unknown"
+            ]
           },
           "reference_object": { "type": ["string", "null"] },
           "measurement_required": { "type": "boolean" },
@@ -178,6 +183,7 @@
           "confirm_question": { "type": ["string", "null"] },
           "bbox": {
             "type": ["array", "null"],
+            "description": "Tight bounds of only this item's visible pixels as [left, top, right, bottom], normalized against the full submitted image from 0 to 1000.",
             "items": { "type": "integer", "minimum": 0, "maximum": 1000 },
             "minItems": 4,
             "maxItems": 4

@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 
 const navigation = [
   { href: "/", label: "홈", icon: "home", featured: false },
-  { href: "/capture", label: "촬영", icon: "camera", featured: true },
   { href: "/history", label: "기록", icon: "history", featured: false },
+  { href: "/capture", label: "촬영", icon: "camera", featured: true },
   { href: "/help", label: "도움말", icon: "help", featured: false },
+  { href: "/account", label: "계정", icon: "account", featured: false },
 ] as const;
 
 export function BottomNav() {

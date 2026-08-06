@@ -10,7 +10,7 @@
 
 ## 로컬 VLM
 
-`vlm/`의 Python API/CLI는 프롬프트·스키마 실험용으로 유지함. App Runner 배포 설정은 운영 경로가 아님.
+`vlm/`의 Python API/CLI는 프롬프트·스키마 실험용으로 유지함. 이전 App Runner 설정은 `legacy/aws/vlm/apprunner.yaml`에 보존되어 있으며 운영 경로가 아님.
 
 ```powershell
 python -m pytest vlm/tests

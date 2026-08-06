@@ -47,6 +47,8 @@ paths:
           description: Invalid filename, media type, or file size
         "401":
           description: Missing or invalid Supabase token
+        "403":
+          description: Current privacy consent has not been recorded
         "503":
           description: Upload storage is not configured
   /api/analyses:
@@ -71,12 +73,26 @@ paths:
           description: Image key does not belong to the authenticated user
         "401":
           description: Missing or invalid Supabase token
+        "403":
+          description: Current privacy consent has not been recorded
         "404":
           description: Uploaded image does not exist
         "429":
           description: Authenticated account has used all five MVP analyses
         "503":
           description: Analysis worker is not configured
+  /api/account:
+    delete:
+      operationId: deleteCurrentAccount
+      security:
+        - supabaseJwt: []
+      responses:
+        "204":
+          description: Authenticated account, server analysis records, and uploaded images were deleted
+        "401":
+          description: Missing or invalid Supabase token
+        "503":
+          description: Account deletion could not be completed
   /api/analyses/{analysis_id}:
     get:
       operationId: getAnalysis
@@ -100,17 +116,3 @@ paths:
           description: Missing or invalid Supabase token
         "404":
           description: Analysis does not exist or belongs to another user
-  /api/waste/{item_name}:
-    get:
-      operationId: getWaste
-      parameters:
-        - in: path
-          name: item_name
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Waste disposal information
-        "501":
-          description: Repository is not connected yet

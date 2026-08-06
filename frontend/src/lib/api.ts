@@ -1,8 +1,8 @@
 import type { AnalysisJob, AnalysisJobStatus, UploadUrlResponse } from "@/types/api";
 import { isAnalysisResponse } from "@/lib/analysis-contract";
 import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
+import { STORAGE_BUCKET } from "@/lib/supabase-config";
 
-const CONFIGURED_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
 const POLL_INTERVAL_MS = 1_500;
 const POLL_TIMEOUT_MS = 3 * 60 * 1_000;
 
@@ -20,7 +20,7 @@ export async function apiRequest<T>(path: string, accessToken: string, init: Req
 
   let response: Response;
   try {
-    response = await fetch(`${CONFIGURED_API_BASE_URL ?? ""}${path}`, { ...init, headers, cache: "no-store" });
+    response = await fetch(path, { ...init, headers, cache: "no-store" });
   } catch (error) {
     if (isAbortError(error)) throw error;
     throw new BackendApiError("분석 서버에 연결할 수 없어요.", 0);
@@ -41,7 +41,7 @@ export async function uploadAndStartAnalysis(image: Blob, filename: string, acce
   });
 
   const { error: uploadError } = await getSupabaseBrowserClient().storage
-    .from(process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET?.trim() || "waste-images")
+    .from(STORAGE_BUCKET)
     .uploadToSignedUrl(upload.image_key, upload.upload_token, image, { contentType: image.type });
   if (uploadError) throw new BackendApiError("사진 업로드에 실패했어요. 다시 시도해줘.", 0);
 

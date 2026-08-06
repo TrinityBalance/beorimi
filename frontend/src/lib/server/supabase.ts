@@ -1,4 +1,6 @@
 import { createClient, type User } from "@supabase/supabase-js";
+import { hasPrivacyConsent } from "@/lib/privacy-consent";
+import { STORAGE_BUCKET } from "@/lib/supabase-config";
 
 const MAX_SOURCE_IMAGE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -20,7 +22,7 @@ function supabaseUrl() { return config("NEXT_PUBLIC_SUPABASE_URL", process.env.N
 function publishableKey() { return config("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY); }
 
 export function storageBucket() {
-  return process.env.SUPABASE_STORAGE_BUCKET?.trim() || "waste-images";
+  return STORAGE_BUCKET;
 }
 
 export function serviceClient() {
@@ -40,6 +42,12 @@ export async function requireUser(request: Request): Promise<User> {
   const { data, error } = await client.auth.getUser(token);
   if (error || !data.user) throw new HttpError(401, "Authentication required");
   return data.user;
+}
+
+export function requirePrivacyConsent(user: User) {
+  if (!hasPrivacyConsent(user)) {
+    throw new HttpError(403, "Privacy consent is required before uploading a photo");
+  }
 }
 
 export function parseUploadPayload(payload: unknown): { filename: string; contentType: string; sizeBytes: number } {

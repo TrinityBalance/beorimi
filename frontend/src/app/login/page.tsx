@@ -2,6 +2,7 @@
 
 import { type FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PrivacyConsent } from "@/components/privacy-consent";
 import { createAccount, getAccessToken, signInWithPassword } from "@/lib/auth";
 
 type AuthMode = "sign-in" | "sign-up";
@@ -11,6 +12,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<AuthMode>("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [privacyConsentAccepted, setPrivacyConsentAccepted] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -36,7 +38,12 @@ export default function LoginPage() {
         router.replace(getNextPath());
         return;
       }
-      const result = await createAccount(email.trim(), password);
+      const result = await createAccount(
+        email.trim(),
+        password,
+        privacyConsentAccepted,
+        getNextPath(),
+      );
       setPassword("");
       if (result.session) router.replace(getNextPath());
       else {
@@ -55,6 +62,7 @@ export default function LoginPage() {
     setError("");
     setNotice("");
     setPassword("");
+    setPrivacyConsentAccepted(false);
   }
 
   return (
@@ -72,10 +80,19 @@ export default function LoginPage() {
         <form className="auth-form" onSubmit={handleSubmit}>
           <label><span>이메일</span><input type="email" value={email} autoComplete="email" required placeholder="name@example.com" onChange={(event) => setEmail(event.target.value)} /></label>
           <label><span>비밀번호</span><input type="password" value={password} autoComplete={mode === "sign-in" ? "current-password" : "new-password"} minLength={8} required placeholder="8자 이상" onChange={(event) => setPassword(event.target.value)} /></label>
-          {mode === "sign-up" && <p className="auth-hint">이메일 인증 링크를 받은 뒤 로그인할 수 있어요.</p>}
+          {mode === "sign-up" && (
+            <>
+              <p className="auth-hint">이메일 인증 링크를 받은 뒤 로그인할 수 있어요.</p>
+              <PrivacyConsent
+                inputId="signup-privacy-consent"
+                checked={privacyConsentAccepted}
+                onChange={setPrivacyConsentAccepted}
+              />
+            </>
+          )}
           {notice && <p className="auth-notice" role="status">{notice}</p>}
           {error && <p className="form-error" role="alert">{error}</p>}
-          <button className="primary-button" type="submit" disabled={pending}>{pending ? "처리 중..." : mode === "sign-up" ? "계정 만들기" : "로그인하고 계속하기"}</button>
+          <button className="primary-button" type="submit" disabled={pending || (mode === "sign-up" && !privacyConsentAccepted)}>{pending ? "처리 중..." : mode === "sign-up" ? "동의하고 계정 만들기" : "로그인하고 계속하기"}</button>
         </form>
       </section>
     </main>

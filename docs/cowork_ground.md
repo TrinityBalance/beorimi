@@ -36,16 +36,7 @@ OPEN/ACK → CANCELLED
 
 ## Backend 발신 요청
 
-### BE-002 [ACK] → Frontend — Amplify 운영 연결
-
-- **우선순위:** BLOCKING
-- **필요 시점:** 배포 전
-- **요구사항:** Amplify 앱을 GitHub `main`에 연결하고 Backend·Cognito 공개 설정을 빌드 환경에 등록합니다.
-- **이유·영향:** 코드의 Cognito 로그인·S3 업로드·비동기 polling은 구현됐지만 운영 도메인과 빌드 환경 설정이 필요합니다.
-- **완료 조건:** `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_COGNITO_USER_POOL_ID`, `NEXT_PUBLIC_COGNITO_USER_POOL_CLIENT_ID` 등록, 배포 build 성공, 운영 origin 전달
-- **관련 계약·파일:** `amplify.yml`, `frontend/.env.example`, `shared/docs/api-contract.md`
-- **수신자 응답:** Frontend 코드 연결 완료. Amplify 콘솔 권한이 필요한 외부 작업만 남았습니다.
-- **구현·검증 증거:** Frontend lint·Next build와 Backend S3→SQS→worker→DynamoDB mock 흐름 통과
+현재 활성 요청 없음.
 
 ## VLM 발신 요청
 
@@ -57,4 +48,5 @@ OPEN/ACK → CANCELLED
 | --- | --- | --- |
 | FE-001 | 분석 결과·오류 계약 연결 | 공용 스키마, Backend 오류 변환, Frontend 런타임 검증 |
 | BE-001 | VLM 서비스 인증·10MiB 제한 | `vlm/app/api.py`, VLM 전체 테스트 |
+| BE-002 | 취소 — AWS/Amplify 배포 철회 | Vercel + Supabase 운영 전환, AWS 코드는 `legacy/aws/`에 보존 |
 | BE-003 | 비동기 worker VLM 계약 | `shared/schemas/vlm-analysis-result.json`, Backend·VLM 전체 테스트 |

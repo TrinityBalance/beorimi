@@ -96,8 +96,14 @@ class FakeSqs:
 
 
 class FakeTable:
-    def __init__(self) -> None:
+    def __init__(self, item=None) -> None:
+        self.item = item
         self.update_request = None
+
+    def get_item(self, **kwargs):
+        if self.item is None:
+            return {}
+        return {"Item": self.item}
 
     def update_item(self, **kwargs):
         self.update_request = kwargs
@@ -106,8 +112,10 @@ class FakeTable:
 class FakeQuotaTable:
     def __init__(self) -> None:
         self.counts = {}
+        self.last_update_request = None
 
     def update_item(self, **kwargs):
+        self.last_update_request = kwargs
         key = kwargs["Key"]["id"]
         values = kwargs["ExpressionAttributeValues"]
         count = self.counts.get(key, 0)
@@ -399,6 +407,40 @@ class AwsServiceTests(unittest.TestCase):
         ]["items"][0]["confidence"]
         self.assertEqual(confidence, Decimal("0.75"))
 
+    def test_repository_decodes_dynamodb_numbers_for_api_contract(self) -> None:
+        repository = AnalysisRepository(
+            FakeTable(
+                {
+                    "id": "analysis-1",
+                    "observation": {
+                        "items": [
+                            {
+                                "id": Decimal("1"),
+                                "quantity": Decimal("2"),
+                                "confidence": Decimal("0.75"),
+                                "bbox": [
+                                    Decimal("0"),
+                                    Decimal("100"),
+                                    Decimal("900"),
+                                    Decimal("1000"),
+                                ],
+                            }
+                        ]
+                    },
+                }
+            )
+        )
+
+        record = repository.get("analysis-1")
+        item = record["observation"]["items"][0]
+
+        self.assertEqual(item["id"], 1)
+        self.assertIsInstance(item["id"], int)
+        self.assertEqual(item["quantity"], 2)
+        self.assertEqual(item["confidence"], 0.75)
+        self.assertIsInstance(item["confidence"], float)
+        self.assertEqual(item["bbox"], [0, 100, 900, 1000])
+
     def test_repository_quota_counter_is_atomic_and_account_scoped(self) -> None:
         table = FakeQuotaTable()
         repository = AnalysisRepository(table)
@@ -412,6 +454,11 @@ class AwsServiceTests(unittest.TestCase):
 
         self.assertEqual(table.counts["analysis-quota#user-1"], 5)
         self.assertEqual(table.counts["analysis-quota#user-2"], 1)
+        self.assertEqual(
+            table.last_update_request["ExpressionAttributeNames"],
+            {"#owner": "owner"},
+        )
+        self.assertIn("#owner = if_not_exists(#owner", table.last_update_request["UpdateExpression"])
 
 
 if __name__ == "__main__":
